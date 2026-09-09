@@ -17,15 +17,18 @@ button{border:0;border-radius:11px;padding:12px 15px;font-weight:800;cursor:poin
 .big{width:100%;padding:18px;font-size:17px}
 input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-radius:10px}
 .login{max-width:430px;margin:45px auto}
-.route{display:grid;grid-template-columns:55px 70px 1fr 1.3fr;gap:8px;padding:10px 5px;border-bottom:1px solid #e5ebf2;align-items:center}
+.route{display:grid;grid-template-columns:55px 75px 1fr 1.4fr;gap:8px;padding:10px 5px;border-bottom:1px solid #e5ebf2;align-items:center}
 .route.head{font-size:12px;font-weight:bold;color:#69788d}
 .school{font-weight:800;color:#123c7a}
 .published{background:#e8f6ef;border:1px solid #a9d7bd;border-radius:12px;padding:12px;margin-top:10px;line-height:1.7}
 .actions{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.status{font-size:13px;margin-top:8px}
+.online{color:#c8ffd9}.offline{color:#ffd0d0}
+.notice{background:#fff4d8;border:1px solid #e7c96b;padding:10px;border-radius:10px;margin-top:10px}
 @media(max-width:700px){
-  .grid{grid-template-columns:1fr}
-  .route{grid-template-columns:45px 60px 1fr}
-  .route .loc{grid-column:3}
+ .grid{grid-template-columns:1fr}
+ .route{grid-template-columns:45px 65px 1fr}
+ .route .loc{grid-column:3}
 }
 </style>
 </head>
@@ -34,6 +37,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 <header>
   <h1>🚌 Öğretmen Servis Otomasyonu</h1>
   <div>Sabah Gidiş • Okul Çıkışı Dönüş</div>
+  <div id="firebaseStatus" class="status">Firebase bağlantısı kuruluyor...</div>
 </header>
 
 <section id="home" class="panel active">
@@ -41,10 +45,11 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     <h2>🚌 Servis Girişi</h2>
     <p>Telefon numaranız ve şifreniz ile giriş yapın.</p>
     <label>Telefon / Kullanıcı No</label>
-    <input id="phone" placeholder="Telefon numarası">
+    <input id="phone" inputmode="numeric" placeholder="Telefon numarası">
     <label>Şifre</label>
     <input id="pass" type="password" placeholder="Şifre">
     <button class="blue big" onclick="systemLogin()">GİRİŞ</button>
+    <div id="loginError" class="notice" style="display:none"></div>
   </div>
 </section>
 
@@ -56,21 +61,21 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 
   <div class="card">
     <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
-    <p>Öğretmen “BİNECEĞİM” dediği anda sistem kayıtlı güzergâh, saat ve okul bilgisini otomatik kullanır.</p>
+    <p>Öğretmen “BİNECEĞİM” dediği anda bilgiler Firebase üzerinden otomatik olarak tüm cihazlarda güncellenir.</p>
     <div class="grid">
       <div>
         <div class="actions">
-          <h3>🌅 Otomatik Sabah Güzergâhı</h3>
+          <h3>🌅 Sabah Güzergâhı</h3>
           <button class="red" onclick="clearTrip('morning')">SİL</button>
         </div>
-        <div id="adminMorning" class="published">Henüz sabah bineceğini bildiren öğretmen yok.</div>
+        <div id="adminMorning" class="published">Yükleniyor...</div>
       </div>
       <div>
         <div class="actions">
-          <h3>🏫 Otomatik Okul Çıkışı</h3>
+          <h3>🏫 Okul Çıkışı</h3>
           <button class="red" onclick="clearTrip('evening')">SİL</button>
         </div>
-        <div id="adminEvening" class="published">Henüz okul çıkışı bineceğini bildiren öğretmen yok.</div>
+        <div id="adminEvening" class="published">Yükleniyor...</div>
       </div>
     </div>
   </div>
@@ -84,13 +89,13 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     <h2>🏫 Okul Çıkışı Kişi Sayıları</h2>
     <div id="eveningCounts"></div>
   </div>
+
   <div class="card">
     <h2>👩‍🏫 Öğretmen Güzergâh / Saat / Okul Bilgileri</h2>
-    <p>Okul çıkışında sistem aşağıdaki kayıtlı okul bilgisini otomatik kullanır.</p>
+    <p>Okul çıkışında sistem öğretmenin kayıtlı okul bilgisini otomatik kullanır.</p>
     <div id="teacherInfoList"></div>
   </div>
 </section>
-
 
 <section id="teacher" class="panel">
   <div class="card">
@@ -116,38 +121,85 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 
   <div class="card">
     <h2>📢 Güncel Servis Bilgileri</h2>
-    <div id="teacherLive">Henüz bineceğini bildiren öğretmen yok.</div>
+    <div id="teacherLive">Yükleniyor...</div>
   </div>
 </section>
 </div>
 
-<script>
-const teachers = [
-  {id:1,name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",m:false,e:false},
-  {id:2,name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",m:false,e:false},
-  {id:3,name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",m:false,e:false},
-  {id:4,name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",m:false,e:false},
-  {id:5,name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",m:false,e:false},
-  {id:6,name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",m:false,e:false},
-  {id:7,name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",m:false,e:false},
-  {id:8,name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",m:false,e:false},
-  {id:9,name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",m:false,e:false},
-  {id:10,name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",m:false,e:false}
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDocs, setDoc, updateDoc,
+  onSnapshot, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD8IYlxPYfHFIoiQaF7DnVJ7Jfgk2XHrxE",
+  authDomain: "ogretmenservis.firebaseapp.com",
+  projectId: "ogretmenservis",
+  storageBucket: "ogretmenservis.firebasestorage.app",
+  messagingSenderId: "986078240894",
+  appId: "1:986078240894:web:1f1cfc11d5f6f22fa2382f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const defaultTeachers = [
+  {id:1,name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",morning:false,evening:false},
+  {id:2,name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",morning:false,evening:false},
+  {id:3,name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",morning:false,evening:false},
+  {id:4,name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",morning:false,evening:false},
+  {id:5,name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",morning:false,evening:false},
+  {id:6,name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",morning:false,evening:false},
+  {id:7,name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",morning:false,evening:false},
+  {id:8,name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",morning:false,evening:false},
+  {id:9,name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",morning:false,evening:false},
+  {id:10,name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",morning:false,evening:false}
 ];
 
-let currentTeacher = null;
+let teachers = [];
+let currentTeacherId = null;
+let currentRole = null;
+let initialized = false;
 
-function saveState(){
-  localStorage.setItem("servisStateV23", JSON.stringify(
-    teachers.map(t=>({id:t.id,m:t.m,e:t.e}))
-  ));
+function setConnection(ok, text){
+  const el=document.getElementById("firebaseStatus");
+  el.textContent=text;
+  el.className="status "+(ok?"online":"offline");
 }
 
-function loadState(){
-  const saved = JSON.parse(localStorage.getItem("servisStateV23") || "[]");
-  saved.forEach(s=>{
-    const t = teachers.find(x=>x.id===s.id);
-    if(t){ t.m=!!s.m; t.e=!!s.e; }
+async function seedTeachersIfNeeded(){
+  const snap = await getDocs(collection(db,"teachers"));
+  if(snap.empty){
+    const batch=writeBatch(db);
+    defaultTeachers.forEach(t=>{
+      batch.set(doc(db,"teachers",String(t.id)), {...t,updatedAt:serverTimestamp()});
+    });
+    await batch.commit();
+  } else {
+    // Eksik öğretmen varsa sadece eksik kaydı oluştur.
+    const existing=new Set(snap.docs.map(d=>d.id));
+    const missing=defaultTeachers.filter(t=>!existing.has(String(t.id)));
+    if(missing.length){
+      const batch=writeBatch(db);
+      missing.forEach(t=>batch.set(doc(db,"teachers",String(t.id)), {...t,updatedAt:serverTimestamp()}));
+      await batch.commit();
+    }
+  }
+}
+
+function subscribeTeachers(){
+  onSnapshot(collection(db,"teachers"), snap=>{
+    teachers=snap.docs.map(d=>({docId:d.id,...d.data()}))
+      .sort((a,b)=>(a.routeOrder||999)-(b.routeOrder||999));
+    initialized=true;
+    setConnection(true,"● Firebase bağlı — canlı senkronizasyon aktif");
+    renderAll();
+    if(currentRole==="teacher") renderTeacher();
+  }, err=>{
+    console.error(err);
+    setConnection(false,"Firebase bağlantı hatası: "+err.message);
   });
 }
 
@@ -157,169 +209,213 @@ function showPanel(id){
   if(id==="admin") renderAll();
 }
 
-function timeAt(index){
-  const base = 6*60;
-  const total = base + index*10;
-  return String(Math.floor(total/60)).padStart(2,"0")+":"+String(total%60).padStart(2,"0");
-}
-
-function activeMorning(){ return teachers.filter(t=>t.m).sort((a,b)=>a.routeOrder-b.routeOrder); }
-function activeEvening(){ return teachers.filter(t=>t.e); }
-
 function systemLogin(){
-  const phone = document.getElementById("phone").value.trim();
-  const pass = document.getElementById("pass").value;
+  const phone=document.getElementById("phone").value.trim();
+  const pass=document.getElementById("pass").value;
+  const err=document.getElementById("loginError");
+  err.style.display="none";
 
-  // Yönetici / Şoför
+  if(!initialized){
+    err.textContent="Firebase verileri henüz yükleniyor. Birkaç saniye sonra tekrar deneyin.";
+    err.style.display="block";
+    return;
+  }
+
   if(phone==="11" && pass==="1"){
-    currentTeacher=null;
+    currentRole="admin";
+    currentTeacherId=null;
     showPanel("admin");
     renderAll();
     return;
   }
 
-  // Öğretmenler
-  const id = Number(phone);
-  currentTeacher = teachers.find(t=>t.id===id && pass==="1") || null;
-  if(!currentTeacher){
-    alert("Telefon numarası veya şifre yanlış.");
+  const id=Number(phone);
+  const t=teachers.find(x=>Number(x.id)===id);
+  if(t && pass==="1"){
+    currentRole="teacher";
+    currentTeacherId=id;
+    showPanel("teacher");
+    renderTeacher();
     return;
   }
-  showPanel("teacher");
-  renderTeacher();
+
+  err.textContent="Telefon numarası veya şifre yanlış.";
+  err.style.display="block";
 }
 
 function logout(){
-  currentTeacher=null;
-  const phone=document.getElementById("phone");
-  const pass=document.getElementById("pass");
-  if(phone) phone.value="";
-  if(pass) pass.value="";
+  currentRole=null;
+  currentTeacherId=null;
+  document.getElementById("phone").value="";
+  document.getElementById("pass").value="";
   showPanel("home");
 }
 
-function toggleTrip(type){
-  if(!currentTeacher) return;
-  if(type==="morning") currentTeacher.m = !currentTeacher.m;
-  else currentTeacher.e = !currentTeacher.e;
-  saveState();
-  renderAll();
-  renderTeacher();
+function currentTeacher(){
+  return teachers.find(t=>Number(t.id)===Number(currentTeacherId));
 }
 
-function clearTrip(type){
-  const text = type==="morning" ? "Sabah güzergâhını" : "Okul çıkışı listesini";
-  if(!confirm(text+" silmek istediğinize emin misiniz?")) return;
-  teachers.forEach(t=>{
-    if(type==="morning") t.m=false;
-    else t.e=false;
-  });
-  saveState();
-  renderAll();
-  renderTeacher();
+function activeMorning(){
+  return teachers.filter(t=>t.morning===true).sort((a,b)=>a.routeOrder-b.routeOrder);
+}
+
+function activeEvening(){
+  return teachers.filter(t=>t.evening===true);
+}
+
+async function toggleTrip(type){
+  const t=currentTeacher();
+  if(!t)return;
+  const field=type==="morning"?"morning":"evening";
+  const next=!t[field];
+  try{
+    await updateDoc(doc(db,"teachers",String(t.id)),{
+      [field]:next,
+      updatedAt:serverTimestamp()
+    });
+  }catch(err){
+    alert("Firebase kayıt hatası: "+err.message);
+  }
+}
+
+async function clearTrip(type){
+  const field=type==="morning"?"morning":"evening";
+  const label=type==="morning"?"Sabah güzergâhını":"Okul çıkışı listesini";
+  if(!confirm(label+" silmek istediğinize emin misiniz?"))return;
+
+  try{
+    const batch=writeBatch(db);
+    teachers.forEach(t=>{
+      batch.update(doc(db,"teachers",String(t.id)),{
+        [field]:false,
+        updatedAt:serverTimestamp()
+      });
+    });
+    await batch.commit();
+  }catch(err){
+    alert("Silme işlemi başarısız: "+err.message);
+  }
+}
+
+function getEveningCounts(){
+  const schools=[...new Set(teachers.map(t=>t.school).filter(Boolean))];
+  return schools.map(s=>({
+    school:s,
+    count:teachers.filter(t=>t.evening===true && t.school===s).length
+  }));
 }
 
 function renderMorningRoute(){
-  const list = activeMorning();
-  const el = document.getElementById("morningRoute");
+  const el=document.getElementById("morningRoute");
+  if(!el)return;
+  const list=activeMorning();
   if(!list.length){
     el.innerHTML='<div class="published">Henüz sabah bineceğini bildiren öğretmen yok.</div>';
     return;
   }
-  el.innerHTML =
+  el.innerHTML=
     '<div class="route head"><span>Sıra</span><span>Saat</span><span>Öğretmen</span><span>Alınacağı Yer</span></div>'+
-    list.map((t,i)=>`<div class="route"><b>${i+1}</b><b>${t.morningTime}</b><span>${t.name}</span><span class="loc">${t.home}</span></div>`).join("");
-}
-
-function getEveningCounts(){
-  const schools=["1. Okul","2. Okul","3. Okul","4. Okul","5. Okul"];
-  return schools.map(s=>({school:s,count:teachers.filter(t=>t.e && t.school===s).length}));
+    list.map((t,i)=>`<div class="route"><b>${i+1}</b><b>${t.morningTime||"-"}</b><span>${t.name}</span><span class="loc">${t.home||"-"}</span></div>`).join("");
 }
 
 function renderEveningCounts(){
+  const el=document.getElementById("eveningCounts");
+  if(!el)return;
   const counts=getEveningCounts();
-  document.getElementById("eveningCounts").innerHTML = counts.map(x=>
+  el.innerHTML=counts.map(x=>
     `<div class="route"><span>🏫</span><span class="school">${x.school}</span><span>${x.count} kişi binecek</span><span><b>${x.count} kişi</b></span></div>`
-  ).join("");
+  ).join("") || '<div class="published">Okul bilgisi bulunamadı.</div>';
 }
-
-
 
 function renderTeacherInfoList(){
   const el=document.getElementById("teacherInfoList");
   if(!el)return;
-  el.innerHTML = [...teachers].sort((a,b)=>a.routeOrder-b.routeOrder).map(t=>`
+  el.innerHTML=teachers.map(t=>`
     <div class="route">
-      <span><b>${t.routeOrder}.</b></span>
-      <span><b>${t.morningTime}</b></span>
+      <span><b>${t.routeOrder||"-"}.</b></span>
+      <span><b>${t.morningTime||"-"}</b></span>
       <span>${t.name}</span>
-      <span class="loc">${t.home} • <span class="school">${t.school}</span></span>
+      <span class="loc">${t.home||"-"} • <span class="school">${t.school||"-"}</span></span>
     </div>
   `).join("");
 }
 
 function renderLivePanels(){
-  const morning = activeMorning();
-  const evening = getEveningCounts();
-  const eveningTotal = evening.reduce((sum,x)=>sum+x.count,0);
+  const morning=activeMorning();
+  const evening=getEveningCounts();
+  const eveningTotal=evening.reduce((sum,x)=>sum+x.count,0);
 
-  const morningHtml = morning.length
-    ? morning.map((t,i)=>`${t.morningTime} — ${t.name} — ${t.home}`).join("<br>")
+  const morningHtml=morning.length
+    ? morning.map(t=>`${t.morningTime||"-"} — ${t.name} — ${t.home||"-"}`).join("<br>")
     : "Henüz sabah bineceğini bildiren öğretmen yok.";
 
-  const eveningHtml = eveningTotal
+  const eveningHtml=eveningTotal
     ? evening.map(x=>`${x.school}: ${x.count} kişi`).join("<br>")
     : "Henüz okul çıkışı bineceğini bildiren öğretmen yok.";
 
   const am=document.getElementById("adminMorning");
   const ae=document.getElementById("adminEvening");
-  if(am) am.innerHTML=morningHtml;
-  if(ae) ae.innerHTML=eveningHtml;
+  if(am)am.innerHTML=morningHtml;
+  if(ae)ae.innerHTML=eveningHtml;
 
   const tl=document.getElementById("teacherLive");
   if(tl){
     let out="";
-    if(morning.length) out += '<div class="published"><b>🌅 Sabah Güzergâhı</b><br>'+morningHtml+'</div>';
-    if(eveningTotal) out += '<div class="published"><b>🏫 Okul Çıkışı</b><br>'+eveningHtml+'</div>';
-    tl.innerHTML = out || "Henüz bineceğini bildiren öğretmen yok.";
+    if(morning.length)out+='<div class="published"><b>🌅 Sabah Güzergâhı</b><br>'+morningHtml+'</div>';
+    if(eveningTotal)out+='<div class="published"><b>🏫 Okul Çıkışı</b><br>'+eveningHtml+'</div>';
+    tl.innerHTML=out||"Henüz bineceğini bildiren öğretmen yok.";
   }
 }
 
 function renderTeacher(){
-  if(!currentTeacher) return;
-  document.getElementById("teacherName").textContent=currentTeacher.name;
-  document.getElementById("teacherSchool").textContent="🏫 "+currentTeacher.school;
-  document.getElementById("schoolPickup").textContent=currentTeacher.school+" çıkışından alınacağım.";
+  const t=currentTeacher();
+  if(!t)return;
+
+  document.getElementById("teacherName").textContent=t.name;
+  document.getElementById("teacherSchool").textContent="🏫 "+(t.school||"-");
+  document.getElementById("schoolPickup").textContent=(t.school||"-")+" çıkışından alınacağım.";
 
   const mb=document.getElementById("morningBtn");
-  mb.textContent=currentTeacher.m ? "SABAH İPTAL ET" : "SABAH BİNECEĞİM";
-  mb.className=(currentTeacher.m?"red":"green")+" big";
+  mb.textContent=t.morning?"SABAH İPTAL ET":"SABAH BİNECEĞİM";
+  mb.className=(t.morning?"red":"green")+" big";
 
   const eb=document.getElementById("eveningBtn");
-  eb.textContent=currentTeacher.e ? "OKUL ÇIKIŞI İPTAL ET" : "OKUL ÇIKIŞI BİNECEĞİM";
-  eb.className=(currentTeacher.e?"red":"orange")+" big";
+  eb.textContent=t.evening?"OKUL ÇIKIŞI İPTAL ET":"OKUL ÇIKIŞI BİNECEĞİM";
+  eb.className=(t.evening?"red":"orange")+" big";
 
-  const mi=activeMorning().findIndex(t=>t.id===currentTeacher.id);
-  document.getElementById("morningTime").innerHTML=currentTeacher.m
-    ? '<div class="published">Servis saatiniz: <b>'+currentTeacher.morningTime+'</b></div>'
+  document.getElementById("morningTime").innerHTML=t.morning
+    ? '<div class="published">Servis saatiniz: <b>'+(t.morningTime||"-")+'</b></div>'
     : "";
 
-  document.getElementById("eveningStatus").innerHTML=currentTeacher.e
-    ? '<div class="published">'+currentTeacher.school+' için kişi sayısına eklendiniz.</div>'
+  document.getElementById("eveningStatus").innerHTML=t.evening
+    ? '<div class="published">'+(t.school||"-")+' için kişi sayısına eklendiniz.</div>'
     : "";
 
   renderLivePanels();
 }
 
 function renderAll(){
+  if(!initialized)return;
   renderMorningRoute();
   renderEveningCounts();
   renderTeacherInfoList();
   renderLivePanels();
 }
 
-loadState();
-renderAll();
+window.systemLogin=systemLogin;
+window.logout=logout;
+window.toggleTrip=toggleTrip;
+window.clearTrip=clearTrip;
+
+(async()=>{
+  try{
+    await seedTeachersIfNeeded();
+    subscribeTeachers();
+  }catch(err){
+    console.error(err);
+    setConnection(false,"Firebase başlatılamadı: "+err.message);
+  }
+})();
 </script>
 </body>
 </html>
