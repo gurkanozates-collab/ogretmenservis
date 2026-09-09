@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Öğretmen Servis Otomasyonu</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fa;font-family:Arial,sans-serif;color:#182235}
+.wrap{max-width:1100px;margin:auto;padding:18px}
+header{background:#123c7a;color:#fff;padding:20px;border-radius:18px;margin-bottom:16px}
+.panel{display:none}.panel.active{display:block}
+.card{background:#fff;border-radius:16px;padding:18px;margin:15px 0;box-shadow:0 5px 18px rgba(0,0,0,.07)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+button{border:0;border-radius:11px;padding:12px 15px;font-weight:800;cursor:pointer}
+.blue{background:#123c7a;color:#fff}.green{background:#168c59;color:#fff}.orange{background:#ed8b18;color:#fff}.red{background:#d64040;color:#fff}.light{background:#e7edf5;color:#182235}
+.big{width:100%;padding:18px;font-size:17px}
+input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-radius:10px}
+.login{max-width:430px;margin:45px auto}
+.route{display:grid;grid-template-columns:55px 70px 1fr 1.3fr;gap:8px;padding:10px 5px;border-bottom:1px solid #e5ebf2;align-items:center}
+.route.head{font-size:12px;font-weight:bold;color:#69788d}
+.school{font-weight:800;color:#123c7a}
+.published{background:#e8f6ef;border:1px solid #a9d7bd;border-radius:12px;padding:12px;margin-top:10px;line-height:1.7}
+.actions{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .route{grid-template-columns:45px 60px 1fr}
+  .route .loc{grid-column:3}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🚌 Öğretmen Servis Otomasyonu</h1>
+  <div>Sabah Gidiş • Okul Çıkışı Dönüş</div>
+</header>
+
+<section id="home" class="panel active">
+  <div class="card login">
+    <h2>🚌 Servis Girişi</h2>
+    <p>Telefon numaranız ve şifreniz ile giriş yapın.</p>
+    <label>Telefon / Kullanıcı No</label>
+    <input id="phone" placeholder="Telefon numarası">
+    <label>Şifre</label>
+    <input id="pass" type="password" placeholder="Şifre">
+    <button class="blue big" onclick="systemLogin()">GİRİŞ</button>
+  </div>
+</section>
+
+<section id="admin" class="panel">
+  <div class="card">
+    <button class="light" onclick="logout()">← Çıkış</button>
+    <h2>Yönetici / Şoför Paneli</h2>
+  </div>
+
+  <div class="card">
+    <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
+    <p>Öğretmen “BİNECEĞİM” dediği anda sistem kayıtlı güzergâh, saat ve okul bilgisini otomatik kullanır.</p>
+    <div class="grid">
+      <div>
+        <div class="actions">
+          <h3>🌅 Otomatik Sabah Güzergâhı</h3>
+          <button class="red" onclick="clearTrip('morning')">SİL</button>
+        </div>
+        <div id="adminMorning" class="published">Henüz sabah bineceğini bildiren öğretmen yok.</div>
+      </div>
+      <div>
+        <div class="actions">
+          <h3>🏫 Otomatik Okul Çıkışı</h3>
+          <button class="red" onclick="clearTrip('evening')">SİL</button>
+        </div>
+        <div id="adminEvening" class="published">Henüz okul çıkışı bineceğini bildiren öğretmen yok.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🌅 Sabah Oluşan Güzergâh</h2>
+    <div id="morningRoute"></div>
+  </div>
+
+  <div class="card">
+    <h2>🏫 Okul Çıkışı Kişi Sayıları</h2>
+    <div id="eveningCounts"></div>
+  </div>
+  <div class="card">
+    <h2>👩‍🏫 Öğretmen Güzergâh / Saat / Okul Bilgileri</h2>
+    <p>Okul çıkışında sistem aşağıdaki kayıtlı okul bilgisini otomatik kullanır.</p>
+    <div id="teacherInfoList"></div>
+  </div>
+</section>
+
+
+<section id="teacher" class="panel">
+  <div class="card">
+    <button class="light" onclick="logout()">← Çıkış</button>
+    <h2 id="teacherName"></h2>
+    <p id="teacherSchool" class="school"></p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>🌅 Sabah Gidiş</h2>
+      <p>Ev/duraktan alınacağım.</p>
+      <button id="morningBtn" class="green big" onclick="toggleTrip('morning')">SABAH BİNECEĞİM</button>
+      <div id="morningTime"></div>
+    </div>
+    <div class="card">
+      <h2>🏫 Okul Çıkışı</h2>
+      <p id="schoolPickup"></p>
+      <button id="eveningBtn" class="orange big" onclick="toggleTrip('evening')">OKUL ÇIKIŞI BİNECEĞİM</button>
+      <div id="eveningStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📢 Güncel Servis Bilgileri</h2>
+    <div id="teacherLive">Henüz bineceğini bildiren öğretmen yok.</div>
+  </div>
+</section>
+</div>
+
+<script>
+const teachers = [
+  {id:1,name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",m:false,e:false},
+  {id:2,name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",m:false,e:false},
+  {id:3,name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",m:false,e:false},
+  {id:4,name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",m:false,e:false},
+  {id:5,name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",m:false,e:false},
+  {id:6,name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",m:false,e:false},
+  {id:7,name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",m:false,e:false},
+  {id:8,name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",m:false,e:false},
+  {id:9,name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",m:false,e:false},
+  {id:10,name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",m:false,e:false}
+];
+
+let currentTeacher = null;
+
+function saveState(){
+  localStorage.setItem("servisStateV23", JSON.stringify(
+    teachers.map(t=>({id:t.id,m:t.m,e:t.e}))
+  ));
+}
+
+function loadState(){
+  const saved = JSON.parse(localStorage.getItem("servisStateV23") || "[]");
+  saved.forEach(s=>{
+    const t = teachers.find(x=>x.id===s.id);
+    if(t){ t.m=!!s.m; t.e=!!s.e; }
+  });
+}
+
+function showPanel(id){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if(id==="admin") renderAll();
+}
+
+function timeAt(index){
+  const base = 6*60;
+  const total = base + index*10;
+  return String(Math.floor(total/60)).padStart(2,"0")+":"+String(total%60).padStart(2,"0");
+}
+
+function activeMorning(){ return teachers.filter(t=>t.m).sort((a,b)=>a.routeOrder-b.routeOrder); }
+function activeEvening(){ return teachers.filter(t=>t.e); }
+
+function systemLogin(){
+  const phone = document.getElementById("phone").value.trim();
+  const pass = document.getElementById("pass").value;
+
+  // Yönetici / Şoför
+  if(phone==="11" && pass==="1"){
+    currentTeacher=null;
+    showPanel("admin");
+    renderAll();
+    return;
+  }
+
+  // Öğretmenler
+  const id = Number(phone);
+  currentTeacher = teachers.find(t=>t.id===id && pass==="1") || null;
+  if(!currentTeacher){
+    alert("Telefon numarası veya şifre yanlış.");
+    return;
+  }
+  showPanel("teacher");
+  renderTeacher();
+}
+
+function logout(){
+  currentTeacher=null;
+  const phone=document.getElementById("phone");
+  const pass=document.getElementById("pass");
+  if(phone) phone.value="";
+  if(pass) pass.value="";
+  showPanel("home");
+}
+
+function toggleTrip(type){
+  if(!currentTeacher) return;
+  if(type==="morning") currentTeacher.m = !currentTeacher.m;
+  else currentTeacher.e = !currentTeacher.e;
+  saveState();
+  renderAll();
+  renderTeacher();
+}
+
+function clearTrip(type){
+  const text = type==="morning" ? "Sabah güzergâhını" : "Okul çıkışı listesini";
+  if(!confirm(text+" silmek istediğinize emin misiniz?")) return;
+  teachers.forEach(t=>{
+    if(type==="morning") t.m=false;
+    else t.e=false;
+  });
+  saveState();
+  renderAll();
+  renderTeacher();
+}
+
+function renderMorningRoute(){
+  const list = activeMorning();
+  const el = document.getElementById("morningRoute");
+  if(!list.length){
+    el.innerHTML='<div class="published">Henüz sabah bineceğini bildiren öğretmen yok.</div>';
+    return;
+  }
+  el.innerHTML =
+    '<div class="route head"><span>Sıra</span><span>Saat</span><span>Öğretmen</span><span>Alınacağı Yer</span></div>'+
+    list.map((t,i)=>`<div class="route"><b>${i+1}</b><b>${t.morningTime}</b><span>${t.name}</span><span class="loc">${t.home}</span></div>`).join("");
+}
+
+function getEveningCounts(){
+  const schools=["1. Okul","2. Okul","3. Okul","4. Okul","5. Okul"];
+  return schools.map(s=>({school:s,count:teachers.filter(t=>t.e && t.school===s).length}));
+}
+
+function renderEveningCounts(){
+  const counts=getEveningCounts();
+  document.getElementById("eveningCounts").innerHTML = counts.map(x=>
+    `<div class="route"><span>🏫</span><span class="school">${x.school}</span><span>${x.count} kişi binecek</span><span><b>${x.count} kişi</b></span></div>`
+  ).join("");
+}
+
+
+
+function renderTeacherInfoList(){
+  const el=document.getElementById("teacherInfoList");
+  if(!el)return;
+  el.innerHTML = [...teachers].sort((a,b)=>a.routeOrder-b.routeOrder).map(t=>`
+    <div class="route">
+      <span><b>${t.routeOrder}.</b></span>
+      <span><b>${t.morningTime}</b></span>
+      <span>${t.name}</span>
+      <span class="loc">${t.home} • <span class="school">${t.school}</span></span>
+    </div>
+  `).join("");
+}
+
+function renderLivePanels(){
+  const morning = activeMorning();
+  const evening = getEveningCounts();
+  const eveningTotal = evening.reduce((sum,x)=>sum+x.count,0);
+
+  const morningHtml = morning.length
+    ? morning.map((t,i)=>`${t.morningTime} — ${t.name} — ${t.home}`).join("<br>")
+    : "Henüz sabah bineceğini bildiren öğretmen yok.";
+
+  const eveningHtml = eveningTotal
+    ? evening.map(x=>`${x.school}: ${x.count} kişi`).join("<br>")
+    : "Henüz okul çıkışı bineceğini bildiren öğretmen yok.";
+
+  const am=document.getElementById("adminMorning");
+  const ae=document.getElementById("adminEvening");
+  if(am) am.innerHTML=morningHtml;
+  if(ae) ae.innerHTML=eveningHtml;
+
+  const tl=document.getElementById("teacherLive");
+  if(tl){
+    let out="";
+    if(morning.length) out += '<div class="published"><b>🌅 Sabah Güzergâhı</b><br>'+morningHtml+'</div>';
+    if(eveningTotal) out += '<div class="published"><b>🏫 Okul Çıkışı</b><br>'+eveningHtml+'</div>';
+    tl.innerHTML = out || "Henüz bineceğini bildiren öğretmen yok.";
+  }
+}
+
+function renderTeacher(){
+  if(!currentTeacher) return;
+  document.getElementById("teacherName").textContent=currentTeacher.name;
+  document.getElementById("teacherSchool").textContent="🏫 "+currentTeacher.school;
+  document.getElementById("schoolPickup").textContent=currentTeacher.school+" çıkışından alınacağım.";
+
+  const mb=document.getElementById("morningBtn");
+  mb.textContent=currentTeacher.m ? "SABAH İPTAL ET" : "SABAH BİNECEĞİM";
+  mb.className=(currentTeacher.m?"red":"green")+" big";
+
+  const eb=document.getElementById("eveningBtn");
+  eb.textContent=currentTeacher.e ? "OKUL ÇIKIŞI İPTAL ET" : "OKUL ÇIKIŞI BİNECEĞİM";
+  eb.className=(currentTeacher.e?"red":"orange")+" big";
+
+  const mi=activeMorning().findIndex(t=>t.id===currentTeacher.id);
+  document.getElementById("morningTime").innerHTML=currentTeacher.m
+    ? '<div class="published">Servis saatiniz: <b>'+currentTeacher.morningTime+'</b></div>'
+    : "";
+
+  document.getElementById("eveningStatus").innerHTML=currentTeacher.e
+    ? '<div class="published">'+currentTeacher.school+' için kişi sayısına eklendiniz.</div>'
+    : "";
+
+  renderLivePanels();
+}
+
+function renderAll(){
+  renderMorningRoute();
+  renderEveningCounts();
+  renderTeacherInfoList();
+  renderLivePanels();
+}
+
+loadState();
+renderAll();
+</script>
+</body>
+</html>
