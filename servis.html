@@ -204,13 +204,6 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 
 
   <div id="teacherRouteTab" class="teacher-section active">
-    <div class="card">
-      <h2>📍 Servisin Canlı Konumu</h2>
-      <div id="driverLocationTeacherStatus" class="location-status">Servis konumu bekleniyor...</div>
-      <div id="driverDistanceInfo" class="location-status" style="display:none"></div>
-      <div id="driverMap"></div>
-      <div style="font-size:11px;margin-top:8px;opacity:.75">Harita görünmezse sayfayı bir kez yenileyin ve tarayıcı önbelleğini temizleyin.</div>
-    </div>
 
 
   <div class="grid">
@@ -236,6 +229,16 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   </div>
 
 </div>
+  <div id="teacherLocationTab" class="teacher-section">
+    <div class="card">
+      <h2>📍 Servisin Canlı Konumu</h2>
+      <div id="driverLocationTeacherStatus" class="location-status">Servis konumu bekleniyor...</div>
+      <div id="driverDistanceInfo" class="location-status" style="display:none"></div>
+      <div id="driverMap"></div>
+      <div style="font-size:11px;margin-top:8px;opacity:.75">Harita görünmezse sayfayı bir kez yenileyin.</div>
+    </div>
+  </div>
+
   <div id="teacherPasswordTab" class="teacher-section">
     <div class="card">
       <h2>🔐 Şifre Değiştir</h2>
@@ -448,6 +451,8 @@ async function addTeacher(){
 
 function refreshDriverMap(){
   if(currentRole!=="teacher") return;
+  const locationTab=document.getElementById("teacherLocationTab");
+  if(locationTab && !locationTab.classList.contains("active")) return;
   setTimeout(()=>{
     ensureDriverMap();
     try{ if(driverMap) driverMap.invalidateSize(true); }catch(e){}
@@ -459,16 +464,21 @@ function refreshDriverMap(){
 
 function showTeacherTab(tab){
   const route=document.getElementById("teacherRouteTab");
+  const location=document.getElementById("teacherLocationTab");
   const password=document.getElementById("teacherPasswordTab");
-  const rb=document.getElementById("teacherRouteTabBtn");
-  const pb=document.getElementById("teacherPasswordTabBtn");
-  if(!route || !password)return;
-  const isRoute=tab==="route";
-  route.classList.toggle("active",isRoute);
-  password.classList.toggle("active",!isRoute);
-  rb.classList.toggle("active",isRoute);
-  pb.classList.toggle("active",!isRoute);
-  if(isRoute) refreshDriverMap();
+  const rb=document.getElementById("teacherRouteBtn");
+  const lb=document.getElementById("teacherLocationBtn");
+  const pb=document.getElementById("teacherPasswordBtn");
+
+  if(route) route.classList.toggle("active",tab==="route");
+  if(location) location.classList.toggle("active",tab==="location");
+  if(password) password.classList.toggle("active",tab==="password");
+
+  if(rb) rb.classList.toggle("active",tab==="route");
+  if(lb) lb.classList.toggle("active",tab==="location");
+  if(pb) pb.classList.toggle("active",tab==="password");
+
+  if(tab==="location") refreshDriverMap();
 }
 
 function openPasswordChange(){
