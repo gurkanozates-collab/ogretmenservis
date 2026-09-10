@@ -37,6 +37,14 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
  .route{grid-template-columns:45px 65px 1fr}
  .route .loc{grid-column:3}
 }
+
+.edit-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+.edit-modal.show{display:flex}
+.edit-box{background:#fff;width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.edit-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.edit-head h2{margin:0}
+.edit-close{background:#e9edf3;color:#111}
+.edit-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -597,45 +605,52 @@ function renderTeacherInfoList(){
   `).join("");
 }
 
-async function editTeacher(id){
+function editTeacher(id){
   const t=teachers.find(x=>Number(x.id)===Number(id));
   if(!t)return;
 
-  const loginNo=prompt("Telefon / Kullanıcı No:", String(t.loginNo ?? t.id));
-  if(loginNo===null)return;
+  document.getElementById("editTeacherId").value=t.id;
+  document.getElementById("editLoginNo").value=String(t.loginNo ?? t.id ?? "");
+  document.getElementById("editPassword").value=String(t.password ?? "1");
+  document.getElementById("editName").value=t.name||"";
+  document.getElementById("editHome").value=t.home||"";
+  document.getElementById("editRouteOrder").value=t.routeOrder||"";
+  document.getElementById("editMorningTime").value=t.morningTime||"";
+  document.getElementById("editSchool").value=t.school||"";
 
-  const password=prompt("Şifre:", String(t.password ?? "1"));
-  if(password===null)return;
+  document.getElementById("editTeacherModal").classList.add("show");
+}
 
-  const name=prompt("Öğretmen Adı:", t.name||"");
-  if(name===null)return;
+function closeTeacherEdit(){
+  document.getElementById("editTeacherModal").classList.remove("show");
+}
 
-  const home=prompt("Durak / Alınacağı Yer:", t.home||"");
-  if(home===null)return;
+async function saveTeacherEdit(){
+  const id=Number(document.getElementById("editTeacherId").value);
+  const t=teachers.find(x=>Number(x.id)===id);
+  if(!t)return;
 
-  const routeOrderText=prompt("Güzergâh Sırası:", String(t.routeOrder||""));
-  if(routeOrderText===null)return;
-  const routeOrder=Number(routeOrderText);
+  const loginNo=document.getElementById("editLoginNo").value.trim();
+  const password=document.getElementById("editPassword").value.trim();
+  const name=document.getElementById("editName").value.trim();
+  const home=document.getElementById("editHome").value.trim();
+  const routeOrder=Number(document.getElementById("editRouteOrder").value);
+  const morningTime=document.getElementById("editMorningTime").value.trim();
+  const school=document.getElementById("editSchool").value.trim();
 
-  const morningTime=prompt("Sabah Saati (HH:MM):", t.morningTime||"");
-  if(morningTime===null)return;
-
-  const school=prompt("Okul:", t.school||"");
-  if(school===null)return;
-
-  if(!loginNo.trim() || !password.trim() || !name.trim() || !home.trim() || !routeOrder || !morningTime.trim() || !school.trim()){
-    alert("Tüm alanları doldurun.");
+  if(!loginNo || !password || !name || !home || !routeOrder || !morningTime || !school){
+    alert("Lütfen tüm bilgileri doldurun.");
     return;
   }
 
-  if(loginNo.trim()==="11"){
+  if(loginNo==="11"){
     alert("11 numarası yöneticiye ayrılmıştır.");
     return;
   }
 
   const duplicate=teachers.some(x=>
-    Number(x.id)!==Number(id) &&
-    String(x.loginNo ?? x.id)===loginNo.trim()
+    Number(x.id)!==id &&
+    String(x.loginNo ?? x.id)===loginNo
   );
   if(duplicate){
     alert("Bu telefon / kullanıcı numarası başka bir öğretmende kayıtlı.");
@@ -644,16 +659,17 @@ async function editTeacher(id){
 
   try{
     await updateDoc(doc(db,"teachers",String(t.id)),{
-      loginNo:loginNo.trim(),
-      password:password.trim(),
-      name:name.trim(),
-      home:home.trim(),
+      loginNo,
+      password,
+      name,
+      home,
       routeOrder,
-      morningTime:morningTime.trim(),
-      school:school.trim(),
+      morningTime,
+      school,
       updatedAt:serverTimestamp()
     });
-    alert("Öğretmen bilgileri güncellendi.");
+    closeTeacherEdit();
+    alert("Öğretmenin tüm bilgileri güncellendi.");
   }catch(err){
     alert("Güncelleme başarısız: "+err.message);
   }
@@ -727,6 +743,8 @@ window.systemLogin=systemLogin;
 window.showAdminTab=showAdminTab;
 window.addTeacher=addTeacher;
 window.editTeacher=editTeacher;
+window.closeTeacherEdit=closeTeacherEdit;
+window.saveTeacherEdit=saveTeacherEdit;
 window.logout=logout;
 window.toggleTrip=toggleTrip;
 window.clearTrip=clearTrip;
@@ -747,5 +765,53 @@ window.clearTrip=clearTrip;
   }
 })();
 </script>
+
+<div id="editTeacherModal" class="edit-modal">
+  <div class="edit-box">
+    <div class="edit-head">
+      <h2>Öğretmen Bilgilerini Düzenle</h2>
+      <button class="edit-close" onclick="closeTeacherEdit()">✕ KAPAT</button>
+    </div>
+
+    <input type="hidden" id="editTeacherId">
+
+    <div class="formgrid">
+      <div>
+        <label>Telefon / Kullanıcı No</label>
+        <input id="editLoginNo">
+      </div>
+      <div>
+        <label>Şifre</label>
+        <input id="editPassword">
+      </div>
+      <div>
+        <label>Öğretmen Adı</label>
+        <input id="editName">
+      </div>
+      <div>
+        <label>Durak / Alınacağı Yer</label>
+        <input id="editHome">
+      </div>
+      <div>
+        <label>Güzergâh Sırası</label>
+        <input id="editRouteOrder" type="number" min="1">
+      </div>
+      <div>
+        <label>Sabah Saati</label>
+        <input id="editMorningTime" type="time">
+      </div>
+      <div>
+        <label>Okul</label>
+        <input id="editSchool">
+      </div>
+    </div>
+
+    <div class="edit-actions">
+      <button class="light" onclick="closeTeacherEdit()">VAZGEÇ</button>
+      <button class="green" onclick="saveTeacherEdit()">DEĞİŞİKLİKLERİ KAYDET</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
