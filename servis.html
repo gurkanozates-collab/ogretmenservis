@@ -50,6 +50,12 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .password-modal.show{display:flex}
 .password-box{background:#fff;width:min(460px,100%);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .password-box h2{margin-top:0}
+
+.teacher-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.teacher-tab{background:#e7edf5;color:#182235}
+.teacher-tab.active{background:#123c7a;color:#fff}
+.teacher-section{display:none}
+.teacher-section.active{display:block}
 </style>
 </head>
 <body>
@@ -152,41 +158,50 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 </section>
 
 
+
 <section id="teacher" class="panel">
   <div class="card">
     <button class="light" onclick="logout()">← Çıkış</button>
     <h2 id="teacherName"></h2>
     <p id="teacherSchool" class="school"></p>
   </div>
-
-  <div class="grid">
-    <div class="card">
-      <h2>🌅 Sabah Gidiş</h2>
-      <p>Ev/duraktan alınacağım.</p>
-      <div id="morningAvailability" class="notice"></div>
-      <button id="morningBtn" class="green big" onclick="toggleTrip('morning')">SABAH BİNECEĞİM</button>
-      <div id="morningTime"></div>
+  <div class="card">
+    <div class="teacher-tabs">
+      <button id="teacherRouteTabBtn" class="teacher-tab active" onclick="showTeacherTab('route')">🚌 GÜZERGÂH</button>
+      <button id="teacherPasswordTabBtn" class="teacher-tab" onclick="showTeacherTab('password')">🔐 ŞİFRE DEĞİŞTİR</button>
     </div>
+  </div>
+
+  <div id="teacherRouteTab" class="teacher-section active">
+    
     <div class="card" id="teacherEveningCard">
       <h2>🏫 Okul Çıkışı</h2>
       <p id="schoolPickup"></p>
       <div id="eveningAvailability" class="notice"></div>
-      <button id="eveningBtn" class="orange big" onclick="toggleTrip('evening')">OKUL ÇIKIŞI BİNECEĞİM</button>
-      <div id="eveningStatus"></div>
-    </div>
+    
   </div>
 
-  <div class="card">
-    <h2>📢 Güncel Servis Bilgileri</h2>
-    <div id="teacherLive">Yükleniyor...</div>
-  </div>
-
+  <div id="teacherPasswordTab" class="teacher-section">
     <div class="card">
       <h2>🔐 Şifre Değiştir</h2>
       <p>Mevcut şifrenizi doğrulayarak yeni şifrenizi belirleyebilirsiniz.</p>
-      <button class="light big" onclick="openPasswordChange()">ŞİFRE DEĞİŞTİR</button>
+
+      <label>Mevcut Şifre</label>
+      <input id="currentPasswordInput" type="password" placeholder="Mevcut şifreniz">
+
+      <label>Yeni Şifre</label>
+      <input id="newPasswordInput" type="password" placeholder="Yeni şifreniz">
+
+      <label>Yeni Şifre Tekrar</label>
+      <input id="newPasswordRepeatInput" type="password" placeholder="Yeni şifreyi tekrar girin">
+
+      <div class="edit-actions">
+        <button class="green" onclick="savePasswordChange()">ŞİFREYİ KAYDET</button>
+      </div>
     </div>
+  </div>
 </section>
+
 </div>
 
 <script type="module">
@@ -376,17 +391,32 @@ async function addTeacher(){
 }
 
 
+function showTeacherTab(tab){
+  const route=document.getElementById("teacherRouteTab");
+  const password=document.getElementById("teacherPasswordTab");
+  const rb=document.getElementById("teacherRouteTabBtn");
+  const pb=document.getElementById("teacherPasswordTabBtn");
+  if(!route || !password) return;
+
+  const isRoute=tab==="route";
+  route.classList.toggle("active",isRoute);
+  password.classList.toggle("active",!isRoute);
+  rb.classList.toggle("active",isRoute);
+  pb.classList.toggle("active",!isRoute);
+}
+
 function openPasswordChange(){
-  const t=currentTeacher();
-  if(!t)return;
-  document.getElementById("currentPasswordInput").value="";
-  document.getElementById("newPasswordInput").value="";
-  document.getElementById("newPasswordRepeatInput").value="";
-  document.getElementById("passwordChangeModal").classList.add("show");
+  showTeacherTab("password");
+  const a=document.getElementById("currentPasswordInput");
+  const b=document.getElementById("newPasswordInput");
+  const c=document.getElementById("newPasswordRepeatInput");
+  if(a)a.value="";
+  if(b)b.value="";
+  if(c)c.value="";
 }
 
 function closePasswordChange(){
-  document.getElementById("passwordChangeModal").classList.remove("show");
+  showTeacherTab("route");
 }
 
 async function savePasswordChange(){
@@ -427,7 +457,7 @@ async function savePasswordChange(){
       password:next,
       updatedAt:serverTimestamp()
     });
-    closePasswordChange();
+    showTeacherTab("route");
     alert("Şifreniz başarıyla değiştirildi.");
   }catch(err){
     alert("Şifre değiştirilemedi: "+err.message);
@@ -815,6 +845,7 @@ window.addTeacher=addTeacher;
 window.editTeacher=editTeacher;
 window.closeTeacherEdit=closeTeacherEdit;
 window.saveTeacherEdit=saveTeacherEdit;
+window.showTeacherTab=showTeacherTab;
 window.openPasswordChange=openPasswordChange;
 window.closePasswordChange=closePasswordChange;
 window.savePasswordChange=savePasswordChange;
@@ -885,26 +916,6 @@ window.clearTrip=clearTrip;
     </div>
   </div>
 </div>
-
-
-<div id="passwordChangeModal" class="password-modal">
-  <div class="password-box">
-    <h2>🔐 Şifre Değiştir</h2>
-
-    <label>Mevcut Şifre</label>
-    <input id="currentPasswordInput" type="password" placeholder="Mevcut şifreniz">
-
-    <label>Yeni Şifre</label>
-    <input id="newPasswordInput" type="password" placeholder="Yeni şifreniz">
-
-    <label>Yeni Şifre Tekrar</label>
-    <input id="newPasswordRepeatInput" type="password" placeholder="Yeni şifreyi tekrar girin">
-
-    <div class="edit-actions">
-      <button class="light" onclick="closePasswordChange()">VAZGEÇ</button>
-      <button class="green" onclick="savePasswordChange()">ŞİFREYİ KAYDET</button>
-    </div>
-  </div>
 </div>
 
 </body>
