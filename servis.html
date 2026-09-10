@@ -198,6 +198,7 @@ function subscribeTeachers(){
     initialized=true;
     setConnection(true,"● Firebase bağlı — canlı senkronizasyon aktif");
     renderAll();
+    autoClearIfNeeded();
     if(currentRole==="teacher") renderTeacher();
   }, err=>{
     console.error(err);
@@ -340,10 +341,81 @@ async function toggleTrip(type){
   }
 }
 
+
+function turkeyDateKey(){
+  const parts=new Intl.DateTimeFormat("en-CA",{
+    timeZone:"Europe/Istanbul",
+    year:"numeric",month:"2-digit",day:"2-digit"
+  }).formatToParts(new Date());
+  const y=parts.find(p=>p.type==="year").value;
+  const m=parts.find(p=>p.type==="month").value;
+  const d=parts.find(p=>p.type==="day").value;
+  return `${y}-${m}-${d}`;
+}
+
+async function getServiceMeta(){
+  const snap=await getDocs(collection(db,"serviceState"));
+  let meta={};
+  snap.forEach(d=>{ if(d.id==="meta") meta=d.data()||{}; });
+  return meta;
+}
+
+async function autoClearIfNeeded(){
+  if(!initialized) return;
+  const now=turkeyMinutesNow();
+  const today=turkeyDateKey();
+
+  try{
+    const meta=await getServiceMeta();
+
+    if(now>=9*60 && meta.morningClearedDate!==today){
+      const batch=writeBatch(db);
+      teachers.forEach(t=>{
+        if(t.morning===true){
+          batch.update(doc(db,"teachers",String(t.id)),{
+            morning:false,
+            updatedAt:serverTimestamp()
+          });
+        }
+      });
+      batch.set(doc(db,"serviceState","meta"),{
+        morningClearedDate:today
+      },{merge:true});
+      await batch.commit();
+    }
+
+    if(now>=17*60 && meta.eveningClearedDate!==today){
+      const batch=writeBatch(db);
+      teachers.forEach(t=>{
+        if(t.evening===true){
+          batch.update(doc(db,"teachers",String(t.id)),{
+            evening:false,
+            updatedAt:serverTimestamp()
+          });
+        }
+      });
+      batch.set(doc(db,"serviceState","meta"),{
+        eveningClearedDate:today
+      },{merge:true});
+      await batch.commit();
+    }
+  }catch(err){
+    console.error("Otomatik liste temizleme hatası:",err);
+  }
+}
+
 async function clearTrip(type){
   const field=type==="morning"?"morning":"evening";
   const label=type==="morning"?"Sabah güzergâhını":"Okul çıkışı listesini";
-  if(!confirm(label+" silmek istediğinize emin misiniz?"))return;
+
+  const pwd=prompt("Yönetici şifresini girin:");
+  if(pwd===null) return;
+  if(pwd!=="1"){
+    alert("Yönetici şifresi yanlış.");
+    return;
+  }
+
+  if(!confirm(label+" silmek istediğinize emin misiniz?")) return;
 
   try{
     const batch=writeBatch(db);
@@ -478,6 +550,7 @@ window.clearTrip=clearTrip;
     renderAvailability();
     setInterval(()=>{
       renderAvailability();
+      autoClearIfNeeded();
       if(currentRole==="teacher") renderTeacher();
     },30000);
   }catch(err){
