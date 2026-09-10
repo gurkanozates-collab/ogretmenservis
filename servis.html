@@ -22,6 +22,13 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .school{font-weight:800;color:#123c7a}
 .published{background:#e8f6ef;border:1px solid #a9d7bd;border-radius:12px;padding:12px;margin-top:10px;line-height:1.7}
 .actions{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.admin-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.admin-tab{background:#e7edf5;color:#182235}
+.admin-tab.active{background:#123c7a;color:#fff}
+.admin-section{display:none}
+.admin-section.active{display:block}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.formgrid{grid-template-columns:1fr}}
 .status{font-size:13px;margin-top:8px}
 .online{color:#c8ffd9}.offline{color:#ffd0d0}
 .notice{background:#fff4d8;border:1px solid #e7c96b;padding:10px;border-radius:10px;margin-top:10px}
@@ -53,49 +60,84 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   </div>
 </section>
 
+
 <section id="admin" class="panel">
   <div class="card">
     <button class="light" onclick="logout()">← Çıkış</button>
     <h2>Yönetici / Şoför Paneli</h2>
+    <div class="admin-tabs">
+      <button id="tabRouteBtn" class="admin-tab active" onclick="showAdminTab('route')">🚌 GÜZERGÂH</button>
+      <button id="tabManageBtn" class="admin-tab" onclick="showAdminTab('manage')">👩‍🏫 ÖĞRETMEN / DURAK / SAAT / GÜZERGÂH</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
-    <p>Öğretmen “BİNECEĞİM” dediği anda bilgiler Firebase üzerinden otomatik olarak tüm cihazlarda güncellenir.</p>
-    <div class="grid">
-      <div>
-        <div class="actions">
-          <h3>🌅 Sabah Güzergâhı</h3>
-          <button class="red" onclick="clearTrip('morning')">SİL</button>
+  <div id="adminRouteTab" class="admin-section active">
+    <div class="card">
+      <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
+      <p>Öğretmen “BİNECEĞİM” dediği anda bilgiler Firebase üzerinden otomatik olarak tüm cihazlarda güncellenir.</p>
+      <div class="grid">
+        <div id="adminMorningBlock">
+          <div class="actions">
+            <h3>🌅 Sabah Güzergâhı</h3>
+            <button class="red" onclick="clearTrip('morning')">SİL</button>
+          </div>
+          <div id="adminMorning" class="published">Yükleniyor...</div>
         </div>
-        <div id="adminMorning" class="published">Yükleniyor...</div>
-      </div>
-      <div>
-        <div class="actions">
-          <h3>🏫 Okul Çıkışı</h3>
-          <button class="red" onclick="clearTrip('evening')">SİL</button>
+        <div id="adminEveningBlock">
+          <div class="actions">
+            <h3>🏫 Okul Çıkışı</h3>
+            <button class="red" onclick="clearTrip('evening')">SİL</button>
+          </div>
+          <div id="adminEvening" class="published">Yükleniyor...</div>
         </div>
-        <div id="adminEvening" class="published">Yükleniyor...</div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>🌅 Sabah Oluşan Güzergâh</h2>
-    <div id="morningRoute"></div>
-  </div>
+  <div id="adminManageTab" class="admin-section">
+    <div class="card">
+      <h2>➕ Öğretmen / Durak / Saat / Güzergâh Ekle</h2>
+      <div class="formgrid">
+        <div>
+          <label>Telefon / Kullanıcı No</label>
+          <input id="newLoginNo" placeholder="Örn: 12">
+        </div>
+        <div>
+          <label>Şifre</label>
+          <input id="newPassword" placeholder="Şifre">
+        </div>
+        <div>
+          <label>Öğretmen Adı</label>
+          <input id="newName" placeholder="Ad Soyad">
+        </div>
+        <div>
+          <label>Durak / Alınacağı Yer</label>
+          <input id="newHome" placeholder="Durak veya adres">
+        </div>
+        <div>
+          <label>Güzergâh Sırası</label>
+          <input id="newRouteOrder" type="number" min="1" placeholder="Örn: 11">
+        </div>
+        <div>
+          <label>Sabah Saati</label>
+          <input id="newMorningTime" type="time">
+        </div>
+        <div>
+          <label>Okul</label>
+          <input id="newSchool" placeholder="Örn: 6. Okul">
+        </div>
+      </div>
+      <button class="green big" onclick="addTeacher()">KAYDET / EKLE</button>
+    </div>
 
-  <div class="card">
-    <h2>🏫 Okul Çıkışı Kişi Sayıları</h2>
-    <div id="eveningCounts"></div>
-  </div>
-
-  <div class="card">
-    <h2>👩‍🏫 Öğretmen Güzergâh / Saat / Okul Bilgileri</h2>
-    <p>Okul çıkışında sistem öğretmenin kayıtlı okul bilgisini otomatik kullanır.</p>
-    <div id="teacherInfoList"></div>
+    <div class="card">
+      <h2>👩‍🏫 Kayıtlı Öğretmen Bilgileri</h2>
+      <p>Okul çıkışında sistem öğretmenin kayıtlı okul bilgisini otomatik kullanır.</p>
+      <div id="teacherInfoList"></div>
+    </div>
   </div>
 </section>
+
 
 <section id="teacher" class="panel">
   <div class="card">
@@ -112,7 +154,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
       <button id="morningBtn" class="green big" onclick="toggleTrip('morning')">SABAH BİNECEĞİM</button>
       <div id="morningTime"></div>
     </div>
-    <div class="card">
+    <div class="card" id="teacherEveningCard">
       <h2>🏫 Okul Çıkışı</h2>
       <p id="schoolPickup"></p>
       <div id="eveningAvailability" class="notice"></div>
@@ -148,16 +190,16 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const defaultTeachers = [
-  {id:1,name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",morning:false,evening:false},
-  {id:2,name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",morning:false,evening:false},
-  {id:3,name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",morning:false,evening:false},
-  {id:4,name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",morning:false,evening:false},
-  {id:5,name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",morning:false,evening:false},
-  {id:6,name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",morning:false,evening:false},
-  {id:7,name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",morning:false,evening:false},
-  {id:8,name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",morning:false,evening:false},
-  {id:9,name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",morning:false,evening:false},
-  {id:10,name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",morning:false,evening:false}
+  {id:1,loginNo:"1",password:"1",name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",morning:false,evening:false},
+  {id:2,loginNo:"2",password:"1",name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",morning:false,evening:false},
+  {id:3,loginNo:"3",password:"1",name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",morning:false,evening:false},
+  {id:4,loginNo:"4",password:"1",name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",morning:false,evening:false},
+  {id:5,loginNo:"5",password:"1",name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",morning:false,evening:false},
+  {id:6,loginNo:"6",password:"1",name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",morning:false,evening:false},
+  {id:7,loginNo:"7",password:"1",name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",morning:false,evening:false},
+  {id:8,loginNo:"8",password:"1",name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",morning:false,evening:false},
+  {id:9,loginNo:"9",password:"1",name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",morning:false,evening:false},
+  {id:10,loginNo:"10",password:"1",name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",morning:false,evening:false}
 ];
 
 let teachers = [];
@@ -209,7 +251,10 @@ function subscribeTeachers(){
 function showPanel(id){
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  if(id==="admin") renderAll();
+  if(id==="admin"){
+    showAdminTab("route");
+    renderAll();
+  }
 }
 
 function systemLogin(){
@@ -232,11 +277,10 @@ function systemLogin(){
     return;
   }
 
-  const id=Number(phone);
-  const t=teachers.find(x=>Number(x.id)===id);
-  if(t && pass==="1"){
+  const t=teachers.find(x=>String(x.loginNo ?? x.id)===phone && String(x.password ?? "1")===pass);
+  if(t){
     currentRole="teacher";
-    currentTeacherId=id;
+    currentTeacherId=Number(t.id);
     showPanel("teacher");
     renderTeacher();
     return;
@@ -244,6 +288,72 @@ function systemLogin(){
 
   err.textContent="Telefon numarası veya şifre yanlış.";
   err.style.display="block";
+}
+
+
+function showAdminTab(tab){
+  const route=document.getElementById("adminRouteTab");
+  const manage=document.getElementById("adminManageTab");
+  const rb=document.getElementById("tabRouteBtn");
+  const mb=document.getElementById("tabManageBtn");
+  if(!route || !manage) return;
+
+  const isRoute=tab==="route";
+  route.classList.toggle("active",isRoute);
+  manage.classList.toggle("active",!isRoute);
+  rb.classList.toggle("active",isRoute);
+  mb.classList.toggle("active",!isRoute);
+}
+
+async function addTeacher(){
+  const loginNo=document.getElementById("newLoginNo").value.trim();
+  const password=document.getElementById("newPassword").value.trim();
+  const name=document.getElementById("newName").value.trim();
+  const home=document.getElementById("newHome").value.trim();
+  const routeOrder=Number(document.getElementById("newRouteOrder").value);
+  const morningTime=document.getElementById("newMorningTime").value;
+  const school=document.getElementById("newSchool").value.trim();
+
+  if(!loginNo || !password || !name || !home || !routeOrder || !morningTime || !school){
+    alert("Lütfen tüm alanları doldurun.");
+    return;
+  }
+
+  if(loginNo==="11"){
+    alert("11 numarası yöneticiye ayrılmıştır.");
+    return;
+  }
+
+  const exists=teachers.some(t=>String(t.loginNo ?? t.id)===loginNo);
+  if(exists){
+    alert("Bu telefon / kullanıcı numarası zaten kayıtlı.");
+    return;
+  }
+
+  try{
+    const numericId = Number(loginNo);
+    const id = Number.isFinite(numericId) && numericId>0 ? numericId : Date.now();
+    await setDoc(doc(db,"teachers",String(id)),{
+      id,
+      loginNo,
+      password,
+      name,
+      home,
+      routeOrder,
+      morningTime,
+      school,
+      morning:false,
+      evening:false,
+      updatedAt:serverTimestamp()
+    });
+
+    ["newLoginNo","newPassword","newName","newHome","newRouteOrder","newMorningTime","newSchool"]
+      .forEach(id=>document.getElementById(id).value="");
+
+    alert("Öğretmen kaydı eklendi.");
+  }catch(err){
+    alert("Kayıt eklenemedi: "+err.message);
+  }
 }
 
 function logout(){
@@ -317,6 +427,18 @@ function renderAvailability(){
     eb.style.opacity=eveningActive?"1":".45";
     eb.style.cursor=eveningActive?"pointer":"not-allowed";
   }
+
+  // Kafa karışıklığını önlemek için yalnızca aktif sefer gösterilir.
+  const teacherMorningCard=document.getElementById("teacherMorningCard");
+  const teacherEveningCard=document.getElementById("teacherEveningCard");
+  const adminMorningBlock=document.getElementById("adminMorningBlock");
+  const adminEveningBlock=document.getElementById("adminEveningBlock");
+
+  if(teacherMorningCard) teacherMorningCard.style.display=morningActive?"block":"none";
+  if(teacherEveningCard) teacherEveningCard.style.display=eveningActive?"block":"none";
+
+  if(adminMorningBlock) adminMorningBlock.style.display=morningActive?"block":"none";
+  if(adminEveningBlock) adminEveningBlock.style.display=eveningActive?"block":"none";
 }
 
 async function toggleTrip(type){
@@ -539,6 +661,8 @@ function renderAll(){
 }
 
 window.systemLogin=systemLogin;
+window.showAdminTab=showAdminTab;
+window.addTeacher=addTeacher;
 window.logout=logout;
 window.toggleTrip=toggleTrip;
 window.clearTrip=clearTrip;
