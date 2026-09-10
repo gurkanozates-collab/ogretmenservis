@@ -45,6 +45,11 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .edit-head h2{margin:0}
 .edit-close{background:#e9edf3;color:#111}
 .edit-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+
+.password-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:10000}
+.password-modal.show{display:flex}
+.password-box{background:#fff;width:min(460px,100%);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.password-box h2{margin-top:0}
 </style>
 </head>
 <body>
@@ -175,6 +180,12 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     <h2>📢 Güncel Servis Bilgileri</h2>
     <div id="teacherLive">Yükleniyor...</div>
   </div>
+
+    <div class="card">
+      <h2>🔐 Şifre Değiştir</h2>
+      <p>Mevcut şifrenizi doğrulayarak yeni şifrenizi belirleyebilirsiniz.</p>
+      <button class="light big" onclick="openPasswordChange()">ŞİFRE DEĞİŞTİR</button>
+    </div>
 </section>
 </div>
 
@@ -361,6 +372,65 @@ async function addTeacher(){
     alert("Öğretmen kaydı eklendi.");
   }catch(err){
     alert("Kayıt eklenemedi: "+err.message);
+  }
+}
+
+
+function openPasswordChange(){
+  const t=currentTeacher();
+  if(!t)return;
+  document.getElementById("currentPasswordInput").value="";
+  document.getElementById("newPasswordInput").value="";
+  document.getElementById("newPasswordRepeatInput").value="";
+  document.getElementById("passwordChangeModal").classList.add("show");
+}
+
+function closePasswordChange(){
+  document.getElementById("passwordChangeModal").classList.remove("show");
+}
+
+async function savePasswordChange(){
+  const t=currentTeacher();
+  if(!t)return;
+
+  const current=document.getElementById("currentPasswordInput").value;
+  const next=document.getElementById("newPasswordInput").value.trim();
+  const repeat=document.getElementById("newPasswordRepeatInput").value.trim();
+
+  if(current!==String(t.password ?? "1")){
+    alert("Mevcut şifre yanlış.");
+    return;
+  }
+
+  if(!next){
+    alert("Yeni şifre boş olamaz.");
+    return;
+  }
+
+  if(next.length<4){
+    alert("Yeni şifre en az 4 karakter olmalıdır.");
+    return;
+  }
+
+  if(next!==repeat){
+    alert("Yeni şifreler birbiriyle aynı değil.");
+    return;
+  }
+
+  if(next===current){
+    alert("Yeni şifre mevcut şifre ile aynı olamaz.");
+    return;
+  }
+
+  try{
+    await updateDoc(doc(db,"teachers",String(t.id)),{
+      password:next,
+      updatedAt:serverTimestamp()
+    });
+    closePasswordChange();
+    alert("Şifreniz başarıyla değiştirildi.");
+  }catch(err){
+    alert("Şifre değiştirilemedi: "+err.message);
   }
 }
 
@@ -745,6 +815,9 @@ window.addTeacher=addTeacher;
 window.editTeacher=editTeacher;
 window.closeTeacherEdit=closeTeacherEdit;
 window.saveTeacherEdit=saveTeacherEdit;
+window.openPasswordChange=openPasswordChange;
+window.closePasswordChange=closePasswordChange;
+window.savePasswordChange=savePasswordChange;
 window.logout=logout;
 window.toggleTrip=toggleTrip;
 window.clearTrip=clearTrip;
@@ -809,6 +882,27 @@ window.clearTrip=clearTrip;
     <div class="edit-actions">
       <button class="light" onclick="closeTeacherEdit()">VAZGEÇ</button>
       <button class="green" onclick="saveTeacherEdit()">DEĞİŞİKLİKLERİ KAYDET</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="passwordChangeModal" class="password-modal">
+  <div class="password-box">
+    <h2>🔐 Şifre Değiştir</h2>
+
+    <label>Mevcut Şifre</label>
+    <input id="currentPasswordInput" type="password" placeholder="Mevcut şifreniz">
+
+    <label>Yeni Şifre</label>
+    <input id="newPasswordInput" type="password" placeholder="Yeni şifreniz">
+
+    <label>Yeni Şifre Tekrar</label>
+    <input id="newPasswordRepeatInput" type="password" placeholder="Yeni şifreyi tekrar girin">
+
+    <div class="edit-actions">
+      <button class="light" onclick="closePasswordChange()">VAZGEÇ</button>
+      <button class="green" onclick="savePasswordChange()">ŞİFREYİ KAYDET</button>
     </div>
   </div>
 </div>
