@@ -108,12 +108,14 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     <div class="card">
       <h2>🌅 Sabah Gidiş</h2>
       <p>Ev/duraktan alınacağım.</p>
+      <div id="morningAvailability" class="notice"></div>
       <button id="morningBtn" class="green big" onclick="toggleTrip('morning')">SABAH BİNECEĞİM</button>
       <div id="morningTime"></div>
     </div>
     <div class="card">
       <h2>🏫 Okul Çıkışı</h2>
       <p id="schoolPickup"></p>
+      <div id="eveningAvailability" class="notice"></div>
       <button id="eveningBtn" class="orange big" onclick="toggleTrip('evening')">OKUL ÇIKIŞI BİNECEĞİM</button>
       <div id="eveningStatus"></div>
     </div>
@@ -263,9 +265,69 @@ function activeEvening(){
   return teachers.filter(t=>t.evening===true);
 }
 
+
+function turkeyMinutesNow(){
+  const parts = new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Europe/Istanbul",
+    hour:"2-digit",
+    minute:"2-digit",
+    hour12:false
+  }).formatToParts(new Date());
+  const h=Number(parts.find(p=>p.type==="hour").value);
+  const m=Number(parts.find(p=>p.type==="minute").value);
+  return h*60+m;
+}
+
+function tripIsActive(type){
+  const now=turkeyMinutesNow();
+  // Sabah: 17:00 - 24:00 ve 00:00 - 09:00
+  if(type==="morning") return now>=17*60 || now<9*60;
+  // Okul çıkışı: 09:00 - 17:00
+  return now>=9*60 && now<17*60;
+}
+
+function renderAvailability(){
+  const morningActive=tripIsActive("morning");
+  const eveningActive=tripIsActive("evening");
+
+  const ma=document.getElementById("morningAvailability");
+  const ea=document.getElementById("eveningAvailability");
+  const mb=document.getElementById("morningBtn");
+  const eb=document.getElementById("eveningBtn");
+
+  if(ma){
+    ma.innerHTML=morningActive
+      ? "🟢 <b>Sabah servisi aktif</b> — 17:00 ile ertesi gün 09:00 arasında."
+      : "🔴 <b>Sabah servisi şu an pasif.</b> Saat 17:00'de aktif olur.";
+  }
+  if(ea){
+    ea.innerHTML=eveningActive
+      ? "🟢 <b>Okul çıkışı aktif</b> — 09:00 ile 17:00 arasında."
+      : "🔴 <b>Okul çıkışı şu an pasif.</b> Saat 09:00'da aktif olur.";
+  }
+
+  if(mb){
+    mb.disabled=!morningActive;
+    mb.style.opacity=morningActive?"1":".45";
+    mb.style.cursor=morningActive?"pointer":"not-allowed";
+  }
+  if(eb){
+    eb.disabled=!eveningActive;
+    eb.style.opacity=eveningActive?"1":".45";
+    eb.style.cursor=eveningActive?"pointer":"not-allowed";
+  }
+}
+
 async function toggleTrip(type){
   const t=currentTeacher();
   if(!t)return;
+  if(!tripIsActive(type)){
+    alert(type==="morning"
+      ? "Sabah servisi yalnızca 17:00 ile ertesi gün 09:00 arasında aktiftir."
+      : "Okul çıkışı yalnızca 09:00 ile 17:00 arasında aktiftir.");
+    renderAvailability();
+    return;
+  }
   const field=type==="morning"?"morning":"evening";
   const next=!t[field];
   try{
@@ -392,6 +454,7 @@ function renderTeacher(){
     : "";
 
   renderLivePanels();
+  renderAvailability();
 }
 
 function renderAll(){
@@ -400,6 +463,7 @@ function renderAll(){
   renderEveningCounts();
   renderTeacherInfoList();
   renderLivePanels();
+  renderAvailability();
 }
 
 window.systemLogin=systemLogin;
@@ -411,6 +475,11 @@ window.clearTrip=clearTrip;
   try{
     await seedTeachersIfNeeded();
     subscribeTeachers();
+    renderAvailability();
+    setInterval(()=>{
+      renderAvailability();
+      if(currentRole==="teacher") renderTeacher();
+    },30000);
   }catch(err){
     console.error(err);
     setConnection(false,"Firebase başlatılamadı: "+err.message);
