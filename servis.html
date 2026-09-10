@@ -592,8 +592,71 @@ function renderTeacherInfoList(){
       <span><b>${t.morningTime||"-"}</b></span>
       <span>${t.name}</span>
       <span class="loc">${t.home||"-"} • <span class="school">${t.school||"-"}</span></span>
+      <button class="light" onclick="editTeacher(${t.id})">DÜZENLE</button>
     </div>
   `).join("");
+}
+
+async function editTeacher(id){
+  const t=teachers.find(x=>Number(x.id)===Number(id));
+  if(!t)return;
+
+  const loginNo=prompt("Telefon / Kullanıcı No:", String(t.loginNo ?? t.id));
+  if(loginNo===null)return;
+
+  const password=prompt("Şifre:", String(t.password ?? "1"));
+  if(password===null)return;
+
+  const name=prompt("Öğretmen Adı:", t.name||"");
+  if(name===null)return;
+
+  const home=prompt("Durak / Alınacağı Yer:", t.home||"");
+  if(home===null)return;
+
+  const routeOrderText=prompt("Güzergâh Sırası:", String(t.routeOrder||""));
+  if(routeOrderText===null)return;
+  const routeOrder=Number(routeOrderText);
+
+  const morningTime=prompt("Sabah Saati (HH:MM):", t.morningTime||"");
+  if(morningTime===null)return;
+
+  const school=prompt("Okul:", t.school||"");
+  if(school===null)return;
+
+  if(!loginNo.trim() || !password.trim() || !name.trim() || !home.trim() || !routeOrder || !morningTime.trim() || !school.trim()){
+    alert("Tüm alanları doldurun.");
+    return;
+  }
+
+  if(loginNo.trim()==="11"){
+    alert("11 numarası yöneticiye ayrılmıştır.");
+    return;
+  }
+
+  const duplicate=teachers.some(x=>
+    Number(x.id)!==Number(id) &&
+    String(x.loginNo ?? x.id)===loginNo.trim()
+  );
+  if(duplicate){
+    alert("Bu telefon / kullanıcı numarası başka bir öğretmende kayıtlı.");
+    return;
+  }
+
+  try{
+    await updateDoc(doc(db,"teachers",String(t.id)),{
+      loginNo:loginNo.trim(),
+      password:password.trim(),
+      name:name.trim(),
+      home:home.trim(),
+      routeOrder,
+      morningTime:morningTime.trim(),
+      school:school.trim(),
+      updatedAt:serverTimestamp()
+    });
+    alert("Öğretmen bilgileri güncellendi.");
+  }catch(err){
+    alert("Güncelleme başarısız: "+err.message);
+  }
 }
 
 function renderLivePanels(){
@@ -663,6 +726,7 @@ function renderAll(){
 window.systemLogin=systemLogin;
 window.showAdminTab=showAdminTab;
 window.addTeacher=addTeacher;
+window.editTeacher=editTeacher;
 window.logout=logout;
 window.toggleTrip=toggleTrip;
 window.clearTrip=clearTrip;
