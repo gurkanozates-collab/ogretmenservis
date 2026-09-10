@@ -62,7 +62,13 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .count-box .num{font-size:28px;font-weight:800;line-height:1}
 .count-box .txt{font-size:12px;font-weight:700;margin-top:6px}
 @media(max-width:560px){.count-menu{grid-template-columns:repeat(2,1fr);gap:6px}.count-box{padding:10px 5px}.count-box .num{font-size:23px}.count-box .txt{font-size:10px}}
+
+#driverMap{height:320px;border-radius:14px;margin-top:12px;overflow:hidden}
+.location-status{padding:10px 12px;border-radius:12px;background:#f3f6fa;margin-top:10px;font-weight:700}
+.location-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -96,7 +102,18 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     </div>
   </div>
 
+  
   <div id="adminRouteTab" class="admin-section active">
+    <div class="card">
+      <h2>📍 Servisçi Canlı Konumu</h2>
+      <p>Konum paylaşımı açıkken öğretmenler servis aracının konumunu canlı görebilir.</p>
+      <div id="driverLocationAdminStatus" class="location-status">Konum paylaşımı kapalı.</div>
+      <div class="location-actions">
+        <button class="green" onclick="startDriverLocation()">KONUM PAYLAŞIMINI BAŞLAT</button>
+        <button class="red" onclick="stopDriverLocation()">KONUM PAYLAŞIMINI DURDUR</button>
+      </div>
+    </div>
+
     <div class="card">
       <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
       <p>Öğretmen “BİNECEĞİM” dediği anda bilgiler Firebase üzerinden otomatik olarak tüm cihazlarda güncellenir.</p>
@@ -140,6 +157,14 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
           <input id="newHome" placeholder="Durak veya adres">
         </div>
         <div>
+          <label>Durak Enlem</label>
+          <input id="newStopLat" type="number" step="any" placeholder="Örn: 41.0082">
+        </div>
+        <div>
+          <label>Durak Boylam</label>
+          <input id="newStopLng" type="number" step="any" placeholder="Örn: 28.9784">
+        </div>
+        <div>
           <label>Güzergâh Sırası</label>
           <input id="newRouteOrder" type="number" min="1" placeholder="Örn: 11">
         </div>
@@ -177,7 +202,15 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     </div>
   </div>
 
-<div id="teacherRouteTab" class="teacher-section active">
+
+  <div id="teacherRouteTab" class="teacher-section active">
+    <div class="card">
+      <h2>📍 Servisin Canlı Konumu</h2>
+      <div id="driverLocationTeacherStatus" class="location-status">Servis konumu bekleniyor...</div>
+      <div id="driverDistanceInfo" class="location-status" style="display:none"></div>
+      <div id="driverMap"></div>
+    </div>
+
 
   <div class="grid">
     <div class="card">
@@ -359,6 +392,10 @@ async function addTeacher(){
   const password=document.getElementById("newPassword").value.trim();
   const name=document.getElementById("newName").value.trim();
   const home=document.getElementById("newHome").value.trim();
+  const stopLatRaw=document.getElementById("newStopLat").value.trim();
+  const stopLngRaw=document.getElementById("newStopLng").value.trim();
+  const stopLat=stopLatRaw===""?null:Number(stopLatRaw);
+  const stopLng=stopLngRaw===""?null:Number(stopLngRaw);
   const routeOrder=Number(document.getElementById("newRouteOrder").value);
   const morningTime=document.getElementById("newMorningTime").value;
   const school=document.getElementById("newSchool").value.trim();
@@ -388,6 +425,8 @@ async function addTeacher(){
       password,
       name,
       home,
+      stopLat,
+      stopLng,
       routeOrder,
       morningTime,
       school,
@@ -396,7 +435,7 @@ async function addTeacher(){
       updatedAt:serverTimestamp()
     });
 
-    ["newLoginNo","newPassword","newName","newHome","newRouteOrder","newMorningTime","newSchool"]
+    ["newLoginNo","newPassword","newName","newHome","newStopLat","newStopLng","newRouteOrder","newMorningTime","newSchool"]
       .forEach(id=>document.getElementById(id).value="");
 
     alert("Öğretmen kaydı eklendi.");
@@ -470,6 +509,153 @@ async function savePasswordChange(){
   }catch(err){
     alert("Şifre değiştirilemedi: "+err.message);
   }
+}
+
+
+let driverWatchId=null;
+let driverMap=null;
+let driverMarker=null;
+let teacherStopMarker=null;
+let driverLocationUnsub=null;
+
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371;
+  const toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1);
+  const dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+
+    Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function saveDriverLocation(position){
+  const {latitude,longitude,accuracy}=position.coords;
+  try{
+    await setDoc(doc(db,"serviceState","driverLocation"),{
+      lat:latitude,
+      lng:longitude,
+      accuracy:accuracy||null,
+      active:true,
+      updatedAt:serverTimestamp()
+    },{merge:true});
+
+    const el=document.getElementById("driverLocationAdminStatus");
+    if(el) el.innerHTML=`🟢 Konum paylaşımı aktif — ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  }catch(err){
+    const el=document.getElementById("driverLocationAdminStatus");
+    if(el) el.textContent="Konum Firebase'e gönderilemedi: "+err.message;
+  }
+}
+
+function startDriverLocation(){
+  if(!navigator.geolocation){
+    alert("Bu cihaz konum paylaşımını desteklemiyor.");
+    return;
+  }
+  if(driverWatchId!==null){
+    alert("Konum paylaşımı zaten açık.");
+    return;
+  }
+
+  const el=document.getElementById("driverLocationAdminStatus");
+  if(el) el.textContent="Konum izni bekleniyor...";
+
+  driverWatchId=navigator.geolocation.watchPosition(
+    saveDriverLocation,
+    err=>{
+      if(el) el.textContent="Konum alınamadı: "+err.message;
+      alert("Konum izni verilmeli. Telefonda konum servisinin açık olduğundan emin olun.");
+    },
+    {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
+  );
+}
+
+async function stopDriverLocation(){
+  if(driverWatchId!==null){
+    navigator.geolocation.clearWatch(driverWatchId);
+    driverWatchId=null;
+  }
+  try{
+    await setDoc(doc(db,"serviceState","driverLocation"),{
+      active:false,
+      updatedAt:serverTimestamp()
+    },{merge:true});
+  }catch(err){}
+
+  const el=document.getElementById("driverLocationAdminStatus");
+  if(el) el.textContent="🔴 Konum paylaşımı kapalı.";
+}
+
+function ensureDriverMap(){
+  const mapEl=document.getElementById("driverMap");
+  if(!mapEl || typeof L==="undefined") return;
+  if(driverMap) return;
+  driverMap=L.map("driverMap").setView([39.0,35.0],6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:"© OpenStreetMap"
+  }).addTo(driverMap);
+}
+
+function updateTeacherDriverLocation(data){
+  const status=document.getElementById("driverLocationTeacherStatus");
+  const dist=document.getElementById("driverDistanceInfo");
+  if(!status) return;
+
+  if(!data || data.active!==true || typeof data.lat!=="number" || typeof data.lng!=="number"){
+    status.textContent="🔴 Servisçi şu anda konum paylaşmıyor.";
+    if(dist) dist.style.display="none";
+    return;
+  }
+
+  status.innerHTML=`🟢 Servis canlı konumu aktif`;
+  ensureDriverMap();
+
+  if(driverMap){
+    const ll=[data.lat,data.lng];
+    if(!driverMarker){
+      driverMarker=L.marker(ll).addTo(driverMap).bindPopup("🚌 Servis");
+    }else{
+      driverMarker.setLatLng(ll);
+    }
+    driverMap.setView(ll,15);
+    setTimeout(()=>driverMap.invalidateSize(),100);
+  }
+
+  const t=currentTeacher();
+  if(t && Number.isFinite(Number(t.stopLat)) && Number.isFinite(Number(t.stopLng))){
+    const km=haversineKm(data.lat,data.lng,Number(t.stopLat),Number(t.stopLng));
+    if(dist){
+      dist.style.display="block";
+      dist.innerHTML=`📏 Durağınıza yaklaşık <b>${km<1?(km*1000).toFixed(0)+" metre":km.toFixed(2)+" km"}</b> kaldı.`;
+    }
+
+    if(driverMap){
+      const stop=[Number(t.stopLat),Number(t.stopLng)];
+      if(!teacherStopMarker){
+        teacherStopMarker=L.marker(stop).addTo(driverMap).bindPopup("📍 Sizin durağınız");
+      }else{
+        teacherStopMarker.setLatLng(stop);
+      }
+      const bounds=L.latLngBounds([[data.lat,data.lng],stop]);
+      driverMap.fitBounds(bounds,{padding:[30,30],maxZoom:16});
+    }
+  }else if(dist){
+    dist.style.display="block";
+    dist.textContent="Durağın koordinatı yönetici tarafından girildiğinde mesafe burada gösterilecek.";
+  }
+}
+
+function subscribeDriverLocation(){
+  if(driverLocationUnsub) driverLocationUnsub();
+  driverLocationUnsub=onSnapshot(doc(db,"serviceState","driverLocation"),snap=>{
+    const data=snap.exists()?snap.data():null;
+    updateTeacherDriverLocation(data);
+    const admin=document.getElementById("driverLocationAdminStatus");
+    if(admin && data && data.active===true && typeof data.lat==="number"){
+      admin.innerHTML=`🟢 Konum paylaşımı aktif — ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`;
+    }
+  });
 }
 
 function logout(){
@@ -722,6 +908,8 @@ function editTeacher(id){
   document.getElementById("editPassword").value=String(t.password ?? "1");
   document.getElementById("editName").value=t.name||"";
   document.getElementById("editHome").value=t.home||"";
+  document.getElementById("editStopLat").value=t.stopLat ?? "";
+  document.getElementById("editStopLng").value=t.stopLng ?? "";
   document.getElementById("editRouteOrder").value=t.routeOrder||"";
   document.getElementById("editMorningTime").value=t.morningTime||"";
   document.getElementById("editSchool").value=t.school||"";
@@ -742,6 +930,10 @@ async function saveTeacherEdit(){
   const password=document.getElementById("editPassword").value.trim();
   const name=document.getElementById("editName").value.trim();
   const home=document.getElementById("editHome").value.trim();
+  const stopLatRaw=document.getElementById("editStopLat").value.trim();
+  const stopLngRaw=document.getElementById("editStopLng").value.trim();
+  const stopLat=stopLatRaw===""?null:Number(stopLatRaw);
+  const stopLng=stopLngRaw===""?null:Number(stopLngRaw);
   const routeOrder=Number(document.getElementById("editRouteOrder").value);
   const morningTime=document.getElementById("editMorningTime").value.trim();
   const school=document.getElementById("editSchool").value.trim();
@@ -771,6 +963,8 @@ async function saveTeacherEdit(){
       password,
       name,
       home,
+      stopLat,
+      stopLng,
       routeOrder,
       morningTime,
       school,
@@ -868,6 +1062,9 @@ function renderTeacher(){
 
   renderLivePanels();
   renderAvailability();
+  if(currentRole==="teacher"){
+    setTimeout(()=>{ if(driverMap) driverMap.invalidateSize(); },150);
+  }
 }
 
 function renderAll(){
@@ -889,6 +1086,8 @@ window.showTeacherTab=showTeacherTab;
 window.openPasswordChange=openPasswordChange;
 window.closePasswordChange=closePasswordChange;
 window.savePasswordChange=savePasswordChange;
+window.startDriverLocation=startDriverLocation;
+window.stopDriverLocation=stopDriverLocation;
 window.logout=logout;
 window.toggleTrip=toggleTrip;
 window.clearTrip=clearTrip;
@@ -897,6 +1096,7 @@ window.clearTrip=clearTrip;
   try{
     await seedTeachersIfNeeded();
     subscribeTeachers();
+    subscribeDriverLocation();
     renderAvailability();
     setInterval(()=>{
       renderAvailability();
@@ -935,6 +1135,14 @@ window.clearTrip=clearTrip;
       <div>
         <label>Durak / Alınacağı Yer</label>
         <input id="editHome">
+      </div>
+      <div>
+        <label>Durak Enlem</label>
+        <input id="editStopLat" type="number" step="any">
+      </div>
+      <div>
+        <label>Durak Boylam</label>
+        <input id="editStopLng" type="number" step="any">
       </div>
       <div>
         <label>Güzergâh Sırası</label>
