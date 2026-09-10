@@ -198,14 +198,13 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   <div class="card">
     <div class="teacher-tabs">
       <button id="teacherRouteTabBtn" class="teacher-tab active" onclick="showTeacherTab('route')">🚌 GÜZERGÂH</button>
+      <button id="teacherLocationTabBtn" class="teacher-tab" onclick="showTeacherTab('location')">📍 CANLI KONUM</button>
       <button id="teacherPasswordTabBtn" class="teacher-tab" onclick="showTeacherTab('password')">🔐 ŞİFRE DEĞİŞTİR</button>
     </div>
   </div>
 
 
   <div id="teacherRouteTab" class="teacher-section active">
-
-
   <div class="grid">
     <div class="card">
       <h2>🌅 Sabah Gidiş</h2>
@@ -235,7 +234,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
       <div id="driverLocationTeacherStatus" class="location-status">Servis konumu bekleniyor...</div>
       <div id="driverDistanceInfo" class="location-status" style="display:none"></div>
       <div id="driverMap"></div>
-      <div style="font-size:11px;margin-top:8px;opacity:.75">Harita görünmezse sayfayı bir kez yenileyin.</div>
+      <div style="font-size:11px;margin-top:8px;opacity:.75">Harita görünmezse sayfayı bir kez yenileyin ve tarayıcı önbelleğini temizleyin.</div>
     </div>
   </div>
 
@@ -466,9 +465,10 @@ function showTeacherTab(tab){
   const route=document.getElementById("teacherRouteTab");
   const location=document.getElementById("teacherLocationTab");
   const password=document.getElementById("teacherPasswordTab");
-  const rb=document.getElementById("teacherRouteBtn");
-  const lb=document.getElementById("teacherLocationBtn");
-  const pb=document.getElementById("teacherPasswordBtn");
+
+  const rb=document.getElementById("teacherRouteTabBtn");
+  const lb=document.getElementById("teacherLocationTabBtn");
+  const pb=document.getElementById("teacherPasswordTabBtn");
 
   if(route) route.classList.toggle("active",tab==="route");
   if(location) location.classList.toggle("active",tab==="location");
