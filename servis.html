@@ -63,7 +63,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .count-box .txt{font-size:12px;font-weight:700;margin-top:6px}
 @media(max-width:560px){.count-menu{grid-template-columns:repeat(2,1fr);gap:6px}.count-box{padding:10px 5px}.count-box .num{font-size:23px}.count-box .txt{font-size:10px}}
 
-#driverMap{height:320px;border-radius:14px;margin-top:12px;overflow:hidden}
+#driverMap{height:320px;min-height:320px;width:100%;border-radius:14px;margin-top:12px;overflow:hidden;background:#e9eef5}
 .location-status{padding:10px 12px;border-radius:12px;background:#f3f6fa;margin-top:10px;font-weight:700}
 .location-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 </style>
@@ -209,6 +209,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
       <div id="driverLocationTeacherStatus" class="location-status">Servis konumu bekleniyor...</div>
       <div id="driverDistanceInfo" class="location-status" style="display:none"></div>
       <div id="driverMap"></div>
+      <div style="font-size:11px;margin-top:8px;opacity:.75">Harita görünmezse sayfayı bir kez yenileyin ve tarayıcı önbelleğini temizleyin.</div>
     </div>
 
 
@@ -445,6 +446,17 @@ async function addTeacher(){
 }
 
 
+function refreshDriverMap(){
+  if(currentRole!=="teacher") return;
+  setTimeout(()=>{
+    ensureDriverMap();
+    try{ if(driverMap) driverMap.invalidateSize(true); }catch(e){}
+  },150);
+  setTimeout(()=>{
+    try{ if(driverMap) driverMap.invalidateSize(true); }catch(e){}
+  },700);
+}
+
 function showTeacherTab(tab){
   const route=document.getElementById("teacherRouteTab");
   const password=document.getElementById("teacherPasswordTab");
@@ -456,6 +468,7 @@ function showTeacherTab(tab){
   password.classList.toggle("active",!isRoute);
   rb.classList.toggle("active",isRoute);
   pb.classList.toggle("active",!isRoute);
+  if(isRoute) refreshDriverMap();
 }
 
 function openPasswordChange(){
@@ -589,12 +602,27 @@ async function stopDriverLocation(){
 function ensureDriverMap(){
   const mapEl=document.getElementById("driverMap");
   if(!mapEl || typeof L==="undefined") return;
-  if(driverMap) return;
-  driverMap=L.map("driverMap").setView([39.0,35.0],6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-    maxZoom:19,
-    attribution:"© OpenStreetMap"
-  }).addTo(driverMap);
+
+  // Harita gizli sekmede oluşturulduysa mobilde sıfır genişlik sorunu olabiliyor.
+  if(!driverMap){
+    driverMap=L.map("driverMap",{
+      zoomControl:true,
+      attributionControl:true
+    }).setView([39.0,35.0],6);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,
+      attribution:"© OpenStreetMap"
+    }).addTo(driverMap);
+  }
+
+  setTimeout(()=>{
+    try{ driverMap.invalidateSize(true); }catch(e){}
+  },100);
+
+  setTimeout(()=>{
+    try{ driverMap.invalidateSize(true); }catch(e){}
+  },500);
 }
 
 function updateTeacherDriverLocation(data){
@@ -608,7 +636,7 @@ function updateTeacherDriverLocation(data){
     return;
   }
 
-  status.innerHTML=`🟢 Servis canlı konumu aktif`;
+  status.innerHTML=`🟢 Servis canlı konumu aktif<br><small>${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</small>`;
   ensureDriverMap();
 
   if(driverMap){
@@ -1086,6 +1114,8 @@ window.showTeacherTab=showTeacherTab;
 window.openPasswordChange=openPasswordChange;
 window.closePasswordChange=closePasswordChange;
 window.savePasswordChange=savePasswordChange;
+window.addEventListener("resize",refreshDriverMap);
+window.addEventListener("orientationchange",refreshDriverMap);
 window.startDriverLocation=startDriverLocation;
 window.stopDriverLocation=stopDriverLocation;
 window.logout=logout;
