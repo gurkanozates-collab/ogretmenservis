@@ -62,10 +62,6 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 .count-box .num{font-size:28px;font-weight:800;line-height:1}
 .count-box .txt{font-size:12px;font-weight:700;margin-top:6px}
 @media(max-width:560px){.count-menu{grid-template-columns:repeat(2,1fr);gap:6px}.count-box{padding:10px 5px}.count-box .num{font-size:23px}.count-box .txt{font-size:10px}}
-
-
-
-
 </style>
 </head>
 <body>
@@ -100,14 +96,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     </div>
   </div>
 
-  
   <div id="adminRouteTab" class="admin-section active">
-</a>
-
-      <div style="font-size:12px;color:#666;margin-top:14px;line-height:1.5">
-      </div>
-    </div>
-
     <div class="card">
       <h2>📢 OTOMATİK GÜNCEL PANEL</h2>
       <p>Öğretmen “BİNECEĞİM” dediği anda bilgiler Firebase üzerinden otomatik olarak tüm cihazlarda güncellenir.</p>
@@ -188,8 +177,8 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
     </div>
   </div>
 
+<div id="teacherRouteTab" class="teacher-section active">
 
-  <div id="teacherRouteTab" class="teacher-section active">
   <div class="grid">
     <div class="card">
       <h2>🌅 Sabah Gidiş</h2>
@@ -213,7 +202,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   </div>
 
 </div>
-<div id="teacherPasswordTab" class="teacher-section">
+  <div id="teacherPasswordTab" class="teacher-section">
     <div class="card">
       <h2>🔐 Şifre Değiştir</h2>
       <label>Mevcut Şifre</label>
@@ -417,30 +406,17 @@ async function addTeacher(){
 }
 
 
-function refreshDriverMap(){
-  if(currentRole!=="teacher") return;
-  const locationTab=document.getElementById("teacherLocationTab");
-  if(locationTab && !locationTab.classList.contains("active")) return;
-  setTimeout(()=>{
-    ensureDriverMap();
-    try{ if(driverMap) driverMap.invalidateSize(true); }catch(e){}
-  },150);
-  setTimeout(()=>{
-    try{ if(driverMap) driverMap.invalidateSize(true); }catch(e){}
-  },700);
-}
-
 function showTeacherTab(tab){
   const route=document.getElementById("teacherRouteTab");
   const password=document.getElementById("teacherPasswordTab");
   const rb=document.getElementById("teacherRouteTabBtn");
   const pb=document.getElementById("teacherPasswordTabBtn");
-
-  if(route) route.classList.toggle("active",tab==="route");
-  if(password) password.classList.toggle("active",tab==="password");
-
-  if(rb) rb.classList.toggle("active",tab==="route");
-  if(pb) pb.classList.toggle("active",tab==="password");
+  if(!route || !password)return;
+  const isRoute=tab==="route";
+  route.classList.toggle("active",isRoute);
+  password.classList.toggle("active",!isRoute);
+  rb.classList.toggle("active",isRoute);
+  pb.classList.toggle("active",!isRoute);
 }
 
 function openPasswordChange(){
@@ -495,7 +471,6 @@ async function savePasswordChange(){
     alert("Şifre değiştirilemedi: "+err.message);
   }
 }
-
 
 function logout(){
   currentRole=null;
@@ -893,9 +868,6 @@ function renderTeacher(){
 
   renderLivePanels();
   renderAvailability();
-  if(currentRole==="teacher"){
-    setTimeout(()=>{ if(driverMap) driverMap.invalidateSize(); },150);
-  }
 }
 
 function renderAll(){
