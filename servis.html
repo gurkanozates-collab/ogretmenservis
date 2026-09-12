@@ -180,7 +180,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 <div id="teacherRouteTab" class="teacher-section active">
 
   <div class="grid">
-    <div class="card">
+    <div class="card" id="teacherMorningCard">
       <h2>🌅 Sabah Gidiş</h2>
       <p>Ev/duraktan alınacağım.</p>
       <div id="morningAvailability" class="notice"></div>
@@ -544,17 +544,17 @@ function renderAvailability(){
     eb.style.cursor=eveningActive?"pointer":"not-allowed";
   }
 
-  // Kafa karışıklığını önlemek için yalnızca aktif sefer gösterilir.
+  // Sabah ve okul çıkışı bölümleri her zaman ekranda görünür.
+  // Aktif olmayan seferin butonu pasif kalır, fakat bölüm gizlenmez.
   const teacherMorningCard=document.getElementById("teacherMorningCard");
   const teacherEveningCard=document.getElementById("teacherEveningCard");
   const adminMorningBlock=document.getElementById("adminMorningBlock");
   const adminEveningBlock=document.getElementById("adminEveningBlock");
 
-  if(teacherMorningCard) teacherMorningCard.style.display=morningActive?"block":"none";
-  if(teacherEveningCard) teacherEveningCard.style.display=eveningActive?"block":"none";
-
-  if(adminMorningBlock) adminMorningBlock.style.display=morningActive?"block":"none";
-  if(adminEveningBlock) adminEveningBlock.style.display=eveningActive?"block":"none";
+  if(teacherMorningCard) teacherMorningCard.style.display="block";
+  if(teacherEveningCard) teacherEveningCard.style.display="block";
+  if(adminMorningBlock) adminMorningBlock.style.display="block";
+  if(adminEveningBlock) adminEveningBlock.style.display="block";
 }
 
 async function toggleTrip(type){
