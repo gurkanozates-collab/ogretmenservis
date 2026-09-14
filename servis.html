@@ -407,6 +407,52 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   color:#4338ca;
 }
 
+
+/* ===== Giriş Rol Seçimi + Şifre Sıfırlama ===== */
+.login-role-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  padding:6px;
+  margin:14px 0 18px;
+  background:#eef2f7;
+  border-radius:14px;
+}
+.login-role-btn{
+  background:transparent;
+  color:#475569;
+  border-radius:10px;
+  padding:11px 10px;
+}
+.login-role-btn.active{
+  background:#fff;
+  color:#0f172a;
+  box-shadow:0 4px 12px rgba(15,23,42,.08);
+}
+.login-helper{
+  font-size:12px;
+  color:#64748b;
+  margin:-4px 0 10px;
+}
+.forgot-btn{
+  width:100%;
+  margin-top:10px;
+  background:transparent;
+  color:#2563eb;
+  border:1px solid #dbeafe;
+}
+.forgot-info{
+  display:none;
+  margin-top:12px;
+  background:#eff6ff;
+  border:1px solid #bfdbfe;
+  color:#1e3a8a;
+  padding:11px 12px;
+  border-radius:11px;
+  font-size:13px;
+  line-height:1.5;
+}
+
 </style>
 </head>
 <body>
@@ -420,12 +466,32 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 <section id="home" class="panel active">
   <div class="card login">
     <h2>🚌 Servis Girişi</h2>
-    <p>Telefon numaranız ve şifreniz ile giriş yapın.</p>
-    <label>Telefon / Kullanıcı No</label>
-    <input id="phone" inputmode="numeric" placeholder="Telefon numarası">
+    <p>Giriş türünüzü seçip bilgilerinizi girin.</p>
+
+    <div class="login-role-tabs">
+      <button id="teacherLoginTab" class="login-role-btn active" onclick="selectLoginRole('teacher')">👩‍🏫 Öğretmen</button>
+      <button id="adminLoginTab" class="login-role-btn" onclick="selectLoginRole('admin')">🛡️ Yönetici</button>
+    </div>
+
+    <div id="teacherLoginFields">
+      <label>Telefon Numarası</label>
+      <input id="phone" inputmode="numeric" placeholder="05XXXXXXXXX">
+      <div class="login-helper">Kayıtlı telefon numaranızı girin.</div>
+    </div>
+
+    <div id="adminLoginFields" style="display:none">
+      <label>Yönetici No</label>
+      <input id="adminNo" inputmode="numeric" placeholder="Yönetici no" value="11">
+      <div class="login-helper">Yönetici kullanıcı numarası.</div>
+    </div>
+
     <label>Şifre</label>
     <input id="pass" type="password" placeholder="Şifre">
+
     <button class="blue big" onclick="systemLogin()">GİRİŞ</button>
+    <button class="forgot-btn" onclick="forgotPassword()">ŞİFREMİ UNUTTUM</button>
+
+    <div id="forgotInfo" class="forgot-info"></div>
     <div id="loginError" class="notice" style="display:none"></div>
   </div>
 </section>
@@ -613,6 +679,9 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
+  getAuth, signInWithEmailAndPassword, sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
   getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc,
   onSnapshot, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -628,6 +697,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const ADMIN_EMAIL="gurkanozates@gmail.com";
+let selectedLoginRole="teacher";
 
 const defaultTeachers = [
   {id:1,loginNo:"05438669630",password:"1",name:"Mazlum",home:"Stadyum",routeOrder:1,morningTime:"05:40",school:"Ahmet Toprak",morning:false,evening:false},
@@ -723,8 +795,25 @@ function showPanel(id){
   }
 }
 
-function systemLogin(){
-  const phone=document.getElementById("phone").value.trim();
+function selectLoginRole(role){
+  selectedLoginRole=role==="admin"?"admin":"teacher";
+
+  const teacherBtn=document.getElementById("teacherLoginTab");
+  const adminBtn=document.getElementById("adminLoginTab");
+  const teacherFields=document.getElementById("teacherLoginFields");
+  const adminFields=document.getElementById("adminLoginFields");
+  const err=document.getElementById("loginError");
+  const forgot=document.getElementById("forgotInfo");
+
+  teacherBtn.classList.toggle("active",selectedLoginRole==="teacher");
+  adminBtn.classList.toggle("active",selectedLoginRole==="admin");
+  teacherFields.style.display=selectedLoginRole==="teacher"?"block":"none";
+  adminFields.style.display=selectedLoginRole==="admin"?"block":"none";
+  if(err) err.style.display="none";
+  if(forgot) forgot.style.display="none";
+}
+
+async function systemLogin(){
   const pass=document.getElementById("pass").value;
   const err=document.getElementById("loginError");
   err.style.display="none";
@@ -735,16 +824,34 @@ function systemLogin(){
     return;
   }
 
-  if(phone==="11" && pass==="1"){
-    currentRole="admin";
-    currentTeacherId=null;
-    localStorage.setItem("servisSession",JSON.stringify({role:"admin"}));
-    showPanel("admin");
-    renderAll();
-    return;
+  if(selectedLoginRole==="admin"){
+    const adminNo=document.getElementById("adminNo").value.trim();
+
+    if(adminNo!=="11"){
+      err.textContent="Yönetici numarası yanlış.";
+      err.style.display="block";
+      return;
+    }
+
+    try{
+      // Yönetici şifresi Firebase Authentication üzerinden doğrulanır.
+      await signInWithEmailAndPassword(auth,ADMIN_EMAIL,pass);
+      currentRole="admin";
+      currentTeacherId=null;
+      localStorage.setItem("servisSession",JSON.stringify({role:"admin"}));
+      showPanel("admin");
+      renderAll();
+      return;
+    }catch(e){
+      err.textContent="Yönetici şifresi yanlış veya Firebase Authentication hesabı henüz kurulmamış.";
+      err.style.display="block";
+      return;
+    }
   }
 
+  const phone=document.getElementById("phone").value.trim();
   const t=teachers.find(x=>String(x.loginNo ?? x.id)===phone && String(x.password ?? "1")===pass);
+
   if(t){
     currentRole="teacher";
     currentTeacherId=Number(t.id);
@@ -759,6 +866,24 @@ function systemLogin(){
 
   err.textContent="Telefon numarası veya şifre yanlış.";
   err.style.display="block";
+}
+
+async function forgotPassword(){
+  const box=document.getElementById("forgotInfo");
+  box.style.display="block";
+
+  if(selectedLoginRole==="teacher"){
+    box.innerHTML="Öğretmen şifreleri şu anda telefon numarasıyla kayıtlıdır. Öğretmen şifresini yönetici panelinden değiştirebilirsiniz. Yönetici şifre sıfırlama e-postası ise <b>"+ADMIN_EMAIL+"</b> adresine gönderilir.";
+    return;
+  }
+
+  try{
+    await sendPasswordResetEmail(auth,ADMIN_EMAIL);
+    box.innerHTML="✅ Şifre sıfırlama bağlantısı <b>"+ADMIN_EMAIL+"</b> adresine gönderildi. E-postadaki bağlantıdan yeni yönetici şifresi belirleyebilirsiniz.";
+  }catch(e){
+    console.error(e);
+    box.innerHTML="⚠️ Sıfırlama e-postası gönderilemedi. Firebase Authentication'da <b>"+ADMIN_EMAIL+"</b> hesabının oluşturulmuş ve E-posta/Şifre girişinin açık olması gerekir.";
+  }
 }
 
 
@@ -898,7 +1023,9 @@ function logout(){
   currentTeacherId=null;
   localStorage.removeItem("servisSession");
   document.getElementById("phone").value="";
+  document.getElementById("adminNo").value="11";
   document.getElementById("pass").value="";
+  selectLoginRole("teacher");
   showPanel("home");
 }
 
@@ -1397,6 +1524,8 @@ function restoreSession(){
   return false;
 }
 
+window.selectLoginRole=selectLoginRole;
+window.forgotPassword=forgotPassword;
 window.systemLogin=systemLogin;
 window.showAdminTab=showAdminTab;
 window.addTeacher=addTeacher;
