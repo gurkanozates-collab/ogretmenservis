@@ -702,6 +702,9 @@ function subscribeTeachers(){
       .sort((a,b)=>(a.routeOrder||999)-(b.routeOrder||999));
     initialized=true;
     setConnection(true,"● Firebase bağlı — canlı senkronizasyon aktif");
+    if(!currentRole){
+      restoreSession();
+    }
     renderAll();
     autoClearIfNeeded();
     if(currentRole==="teacher") renderTeacher();
@@ -735,6 +738,7 @@ function systemLogin(){
   if(phone==="11" && pass==="1"){
     currentRole="admin";
     currentTeacherId=null;
+    localStorage.setItem("servisSession",JSON.stringify({role:"admin"}));
     showPanel("admin");
     renderAll();
     return;
@@ -744,6 +748,10 @@ function systemLogin(){
   if(t){
     currentRole="teacher";
     currentTeacherId=Number(t.id);
+    localStorage.setItem("servisSession",JSON.stringify({
+      role:"teacher",
+      teacherId:Number(t.id)
+    }));
     showPanel("teacher");
     renderTeacher();
     return;
@@ -888,6 +896,7 @@ async function savePasswordChange(){
 function logout(){
   currentRole=null;
   currentTeacherId=null;
+  localStorage.removeItem("servisSession");
   document.getElementById("phone").value="";
   document.getElementById("pass").value="";
   showPanel("home");
@@ -1351,6 +1360,41 @@ function renderAll(){
   renderTeacherInfoList();
   renderLivePanels();
   renderAvailability();
+}
+
+
+function restoreSession(){
+  try{
+    const raw=localStorage.getItem("servisSession");
+    if(!raw) return false;
+
+    const session=JSON.parse(raw);
+
+    if(session.role==="admin"){
+      currentRole="admin";
+      currentTeacherId=null;
+      showPanel("admin");
+      renderAll();
+      return true;
+    }
+
+    if(session.role==="teacher"){
+      const t=teachers.find(x=>Number(x.id)===Number(session.teacherId));
+      if(t){
+        currentRole="teacher";
+        currentTeacherId=Number(t.id);
+        showPanel("teacher");
+        renderTeacher();
+        return true;
+      }
+    }
+
+    localStorage.removeItem("servisSession");
+  }catch(err){
+    console.error("Oturum geri yükleme hatası:",err);
+    localStorage.removeItem("servisSession");
+  }
+  return false;
 }
 
 window.systemLogin=systemLogin;
