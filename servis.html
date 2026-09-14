@@ -222,7 +222,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDocs, setDoc, updateDoc,
+  getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc,
   onSnapshot, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
@@ -239,16 +239,22 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const defaultTeachers = [
-  {id:1,loginNo:"1",password:"1",name:"Öğretmen 1",home:"Merkez Mahallesi",routeOrder:1,morningTime:"06:00",school:"1. Okul",morning:false,evening:false},
-  {id:2,loginNo:"2",password:"1",name:"Öğretmen 2",home:"Atatürk Caddesi",routeOrder:2,morningTime:"06:10",school:"1. Okul",morning:false,evening:false},
-  {id:3,loginNo:"3",password:"1",name:"Öğretmen 3",home:"Belediye Durağı",routeOrder:3,morningTime:"06:20",school:"1. Okul",morning:false,evening:false},
-  {id:4,loginNo:"4",password:"1",name:"Öğretmen 4",home:"Çarşı Meydanı",routeOrder:4,morningTime:"06:30",school:"2. Okul",morning:false,evening:false},
-  {id:5,loginNo:"5",password:"1",name:"Öğretmen 5",home:"Devlet Hastanesi",routeOrder:5,morningTime:"06:40",school:"2. Okul",morning:false,evening:false},
-  {id:6,loginNo:"6",password:"1",name:"Öğretmen 6",home:"Stadyum Durağı",routeOrder:6,morningTime:"06:50",school:"2. Okul",morning:false,evening:false},
-  {id:7,loginNo:"7",password:"1",name:"Öğretmen 7",home:"Cumhuriyet Parkı",routeOrder:7,morningTime:"07:00",school:"3. Okul",morning:false,evening:false},
-  {id:8,loginNo:"8",password:"1",name:"Öğretmen 8",home:"Yeni Mahalle",routeOrder:8,morningTime:"07:10",school:"3. Okul",morning:false,evening:false},
-  {id:9,loginNo:"9",password:"1",name:"Öğretmen 9",home:"Köprü Durağı",routeOrder:9,morningTime:"07:20",school:"4. Okul",morning:false,evening:false},
-  {id:10,loginNo:"10",password:"1",name:"Öğretmen 10",home:"Okul Yolu",routeOrder:10,morningTime:"07:30",school:"5. Okul",morning:false,evening:false}
+  {id:1,loginNo:"05438669630",password:"1",name:"Mazlum",home:"Stadyum",routeOrder:1,morningTime:"05:40",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:2,loginNo:"05392026027",password:"1",name:"Hatice",home:"Winsha AVM Arkası",routeOrder:2,morningTime:"05:45",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:3,loginNo:"05332581320",password:"1",name:"Deniz",home:"Elazığ Caddesi",routeOrder:3,morningTime:"05:50",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:4,loginNo:"05529220624",password:"1",name:"Bahar",home:"Forum Arkası",routeOrder:4,morningTime:"05:55",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:5,loginNo:"05325645416",password:"1",name:"Menal",home:"Tekel K. Bıçak M.",routeOrder:5,morningTime:"06:00",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:6,loginNo:"05059341117",password:"1",name:"Samra",home:"Tama Park",routeOrder:6,morningTime:"06:10",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:7,loginNo:"05536912813",password:"1",name:"Büşra",home:"GO Petrol",routeOrder:7,morningTime:"06:10",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:8,loginNo:"05357447277",password:"1",name:"Serbest",home:"Ceylanlar",routeOrder:8,morningTime:"06:30",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:9,loginNo:"05393622657",password:"1",name:"Hasan",home:"Gaziler Şeyh... Altı",routeOrder:9,morningTime:"06:30",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:10,loginNo:"05054537623",password:"1",name:"İbrahim",home:"Selvan Market",routeOrder:10,morningTime:"06:40",school:"Ahmet Toprak",morning:false,evening:false},
+  {id:11,loginNo:"05067835309",password:"1",name:"Erdal",home:"Musa Anter Kavşağı",routeOrder:11,morningTime:"06:05",school:"Demir Çelik",morning:false,evening:false},
+  {id:12,loginNo:"05389223869",password:"1",name:"Emin",home:"Ninova",routeOrder:12,morningTime:"06:35",school:"Demir Çelik",morning:false,evening:false},
+  {id:13,loginNo:"05338387088",password:"1",name:"Servan",home:"Kanter",routeOrder:13,morningTime:"06:30",school:"Demir Çelik",morning:false,evening:false},
+  {id:14,loginNo:"05316605081",password:"1",name:"Furkan",home:"Araç Muayene",routeOrder:14,morningTime:"06:20",school:"Atatürk İ.O.",morning:false,evening:false},
+  {id:15,loginNo:"05423272107",password:"1",name:"Hasret",home:"Göletli Park",routeOrder:15,morningTime:"06:25",school:"Zümrüt İ.O.",morning:false,evening:false},
+  {id:16,loginNo:"05373502637",password:"1",name:"Sema",home:"Yeni Hal",routeOrder:16,morningTime:"06:25",school:"Adliye",morning:false,evening:false}
 ];
 
 let teachers = [];
@@ -263,22 +269,57 @@ function setConnection(ok, text){
 }
 
 async function seedTeachersIfNeeded(){
-  const snap = await getDocs(collection(db,"teachers"));
-  if(snap.empty){
+  const DATA_VERSION="2026-09-14-gercek-liste-v1";
+  const migrationRef=doc(db,"serviceState","teacherDataMigration");
+  const migrationSnap=await getDoc(migrationRef);
+
+  if(!migrationSnap.exists() || migrationSnap.data().version!==DATA_VERSION){
+    const existingSnap=await getDocs(collection(db,"teachers"));
     const batch=writeBatch(db);
+
+    // Yalnızca eski örnek Öğretmen 1-10 kayıtlarını kaldır.
+    existingSnap.docs.forEach(d=>{
+      const data=d.data();
+      if(/^Öğretmen\s+\d+$/i.test(String(data.name||"").trim())){
+        batch.delete(d.ref);
+      }
+    });
+
+    // Kağıttaki gerçek listeyi telefon numarası belge anahtarıyla ekle/güncelle.
     defaultTeachers.forEach(t=>{
-      batch.set(doc(db,"teachers",String(t.id)), {...t,updatedAt:serverTimestamp()});
+      batch.set(
+        doc(db,"teachers",String(t.loginNo)),
+        {...t,updatedAt:serverTimestamp()},
+        {merge:true}
+      );
+    });
+
+    batch.set(migrationRef,{
+      version:DATA_VERSION,
+      migratedAt:serverTimestamp()
+    },{merge:true});
+
+    await batch.commit();
+    return;
+  }
+
+  // Daha sonra silinen bir kayıt olursa listedeki eksikleri tekrar ekle.
+  const snap=await getDocs(collection(db,"teachers"));
+  const existingPhones=new Set(
+    snap.docs.map(d=>String(d.data().loginNo ?? ""))
+  );
+  const missing=defaultTeachers.filter(t=>!existingPhones.has(String(t.loginNo)));
+
+  if(missing.length){
+    const batch=writeBatch(db);
+    missing.forEach(t=>{
+      batch.set(
+        doc(db,"teachers",String(t.loginNo)),
+        {...t,updatedAt:serverTimestamp()},
+        {merge:true}
+      );
     });
     await batch.commit();
-  } else {
-    // Eksik öğretmen varsa sadece eksik kaydı oluştur.
-    const existing=new Set(snap.docs.map(d=>d.id));
-    const missing=defaultTeachers.filter(t=>!existing.has(String(t.id)));
-    if(missing.length){
-      const batch=writeBatch(db);
-      missing.forEach(t=>batch.set(doc(db,"teachers",String(t.id)), {...t,updatedAt:serverTimestamp()}));
-      await batch.commit();
-    }
   }
 }
 
