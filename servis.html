@@ -481,7 +481,7 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
 
     <div id="adminLoginFields" style="display:none">
       <label>Yönetici No</label>
-      <input id="adminNo" inputmode="numeric" placeholder="Yönetici no" value="11">
+      <input id="adminNo" inputmode="numeric" placeholder="05XXXXXXXXX" value="05449106801">
       <div class="login-helper">Yönetici kullanıcı numarası.</div>
     </div>
 
@@ -829,7 +829,7 @@ async function systemLogin(){
   if(selectedLoginRole==="admin"){
     const adminNo=document.getElementById("adminNo").value.trim();
 
-    if(adminNo!=="11"){
+    if(adminNo!=="05449106801"){
       err.textContent="Yönetici numarası yanlış.";
       err.style.display="block";
       return;
@@ -917,8 +917,8 @@ async function addTeacher(){
     return;
   }
 
-  if(loginNo==="11"){
-    alert("11 numarası yöneticiye ayrılmıştır.");
+  if(loginNo==="05449106801"){
+    alert("05449106801 numarası yöneticiye ayrılmıştır.");
     return;
   }
 
@@ -1025,7 +1025,7 @@ function logout(){
   currentTeacherId=null;
   localStorage.removeItem("servisSession");
   document.getElementById("phone").value="";
-  document.getElementById("adminNo").value="11";
+  document.getElementById("adminNo").value="05449106801";
   document.getElementById("pass").value="";
   selectLoginRole("teacher");
   showPanel("home");
@@ -1324,8 +1324,8 @@ async function saveTeacherEdit(){
     return;
   }
 
-  if(loginNo==="11"){
-    alert("11 numarası yöneticiye ayrılmıştır.");
+  if(loginNo==="05449106801"){
+    alert("05449106801 numarası yöneticiye ayrılmıştır.");
     return;
   }
 
