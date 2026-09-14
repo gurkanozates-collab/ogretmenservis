@@ -1218,7 +1218,11 @@ async function clearTrip(type){
 
   const pwd=prompt("Yönetici şifresini girin:");
   if(pwd===null) return;
-  if(pwd!=="1"){
+
+  try{
+    // Silme işlemi de artık sabit "1" yerine Firebase'deki güncel yönetici şifresini doğrular.
+    await signInWithEmailAndPassword(auth,ADMIN_EMAIL,pwd);
+  }catch(err){
     alert("Yönetici şifresi yanlış.");
     return;
   }
