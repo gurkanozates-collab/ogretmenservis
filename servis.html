@@ -273,54 +273,36 @@ async function seedTeachersIfNeeded(){
   const migrationRef=doc(db,"serviceState","teacherDataMigration");
   const migrationSnap=await getDoc(migrationRef);
 
-  if(!migrationSnap.exists() || migrationSnap.data().version!==DATA_VERSION){
-    const existingSnap=await getDocs(collection(db,"teachers"));
-    const batch=writeBatch(db);
-
-    // Yalnızca eski örnek Öğretmen 1-10 kayıtlarını kaldır.
-    existingSnap.docs.forEach(d=>{
-      const data=d.data();
-      if(/^Öğretmen\s+\d+$/i.test(String(data.name||"").trim())){
-        batch.delete(d.ref);
-      }
-    });
-
-    // Kağıttaki gerçek listeyi telefon numarası belge anahtarıyla ekle/güncelle.
-    defaultTeachers.forEach(t=>{
-      batch.set(
-        doc(db,"teachers",String(t.loginNo)),
-        {...t,updatedAt:serverTimestamp()},
-        {merge:true}
-      );
-    });
-
-    batch.set(migrationRef,{
-      version:DATA_VERSION,
-      migratedAt:serverTimestamp()
-    },{merge:true});
-
-    await batch.commit();
+  // Bu liste yalnızca bir kez aktarılır.
+  // Sonradan yönetici tarafından yapılan düzenlemeler tekrar eski hale döndürülmez.
+  if(migrationSnap.exists() && migrationSnap.data().version===DATA_VERSION){
     return;
   }
 
-  // Daha sonra silinen bir kayıt olursa listedeki eksikleri tekrar ekle.
-  const snap=await getDocs(collection(db,"teachers"));
-  const existingPhones=new Set(
-    snap.docs.map(d=>String(d.data().loginNo ?? ""))
-  );
-  const missing=defaultTeachers.filter(t=>!existingPhones.has(String(t.loginNo)));
+  const existingSnap=await getDocs(collection(db,"teachers"));
+  const batch=writeBatch(db);
 
-  if(missing.length){
-    const batch=writeBatch(db);
-    missing.forEach(t=>{
-      batch.set(
-        doc(db,"teachers",String(t.loginNo)),
-        {...t,updatedAt:serverTimestamp()},
-        {merge:true}
-      );
-    });
-    await batch.commit();
-  }
+  existingSnap.docs.forEach(d=>{
+    const data=d.data();
+    if(/^Öğretmen\s+\d+$/i.test(String(data.name||"").trim())){
+      batch.delete(d.ref);
+    }
+  });
+
+  defaultTeachers.forEach(t=>{
+    batch.set(
+      doc(db,"teachers",String(t.loginNo)),
+      {...t,updatedAt:serverTimestamp()},
+      {merge:true}
+    );
+  });
+
+  batch.set(migrationRef,{
+    version:DATA_VERSION,
+    migratedAt:serverTimestamp()
+  },{merge:true});
+
+  await batch.commit();
 }
 
 function subscribeTeachers(){
@@ -421,9 +403,8 @@ async function addTeacher(){
   }
 
   try{
-    const numericId = Number(loginNo);
-    const id = Number.isFinite(numericId) && numericId>0 ? numericId : Date.now();
-    await setDoc(doc(db,"teachers",String(id)),{
+    const id=Date.now();
+    await setDoc(doc(db,"teachers",loginNo),{
       id,
       loginNo,
       password,
@@ -502,7 +483,7 @@ async function savePasswordChange(){
   }
 
   try{
-    await updateDoc(doc(db,"teachers",String(t.id)),{
+    await updateDoc(doc(db,"teachers",String(t.docId)),{
       password:next,
       updatedAt:serverTimestamp()
     });
@@ -611,7 +592,7 @@ async function toggleTrip(type){
   const field=type==="morning"?"morning":"evening";
   const next=!t[field];
   try{
-    await updateDoc(doc(db,"teachers",String(t.id)),{
+    await updateDoc(doc(db,"teachers",String(t.docId)),{
       [field]:next,
       updatedAt:serverTimestamp()
     });
@@ -651,7 +632,7 @@ async function autoClearIfNeeded(){
       const batch=writeBatch(db);
       teachers.forEach(t=>{
         if(t.morning===true){
-          batch.update(doc(db,"teachers",String(t.id)),{
+          batch.update(doc(db,"teachers",String(t.docId)),{
             morning:false,
             updatedAt:serverTimestamp()
           });
@@ -667,7 +648,7 @@ async function autoClearIfNeeded(){
       const batch=writeBatch(db);
       teachers.forEach(t=>{
         if(t.evening===true){
-          batch.update(doc(db,"teachers",String(t.id)),{
+          batch.update(doc(db,"teachers",String(t.docId)),{
             evening:false,
             updatedAt:serverTimestamp()
           });
@@ -699,7 +680,7 @@ async function clearTrip(type){
   try{
     const batch=writeBatch(db);
     teachers.forEach(t=>{
-      batch.update(doc(db,"teachers",String(t.id)),{
+      batch.update(doc(db,"teachers",String(t.docId)),{
         [field]:false,
         updatedAt:serverTimestamp()
       });
@@ -749,17 +730,17 @@ function renderTeacherInfoList(){
       <span><b>${t.morningTime||"-"}</b></span>
       <span>${t.name}</span>
       <span class="loc">${t.home||"-"} • <span class="school">${t.school||"-"}</span></span>
-      <button class="light" onclick="editTeacher(${t.id})">DÜZENLE</button>
+      <button class="light" onclick='editTeacher(${JSON.stringify(t.docId)})'>DÜZENLE</button>
     </div>
   `).join("");
 }
 
-function editTeacher(id){
-  const t=teachers.find(x=>Number(x.id)===Number(id));
+function editTeacher(docId){
+  const t=teachers.find(x=>String(x.docId)===String(docId));
   if(!t)return;
 
-  document.getElementById("editTeacherId").value=t.id;
-  document.getElementById("editLoginNo").value=String(t.loginNo ?? t.id ?? "");
+  document.getElementById("editTeacherId").value=t.docId;
+  document.getElementById("editLoginNo").value=String(t.loginNo ?? "");
   document.getElementById("editPassword").value=String(t.password ?? "1");
   document.getElementById("editName").value=t.name||"";
   document.getElementById("editHome").value=t.home||"";
@@ -775,9 +756,12 @@ function closeTeacherEdit(){
 }
 
 async function saveTeacherEdit(){
-  const id=Number(document.getElementById("editTeacherId").value);
-  const t=teachers.find(x=>Number(x.id)===id);
-  if(!t)return;
+  const oldDocId=document.getElementById("editTeacherId").value;
+  const t=teachers.find(x=>String(x.docId)===String(oldDocId));
+  if(!t){
+    alert("Öğretmen kaydı bulunamadı.");
+    return;
+  }
 
   const loginNo=document.getElementById("editLoginNo").value.trim();
   const password=document.getElementById("editPassword").value.trim();
@@ -798,25 +782,38 @@ async function saveTeacherEdit(){
   }
 
   const duplicate=teachers.some(x=>
-    Number(x.id)!==id &&
-    String(x.loginNo ?? x.id)===loginNo
+    String(x.docId)!==String(oldDocId) &&
+    String(x.loginNo ?? "")===loginNo
   );
   if(duplicate){
     alert("Bu telefon / kullanıcı numarası başka bir öğretmende kayıtlı.");
     return;
   }
 
+  const updatedData={
+    id:t.id ?? Date.now(),
+    loginNo,
+    password,
+    name,
+    home,
+    routeOrder,
+    morningTime,
+    school,
+    morning:t.morning===true,
+    evening:t.evening===true,
+    updatedAt:serverTimestamp()
+  };
+
   try{
-    await updateDoc(doc(db,"teachers",String(t.id)),{
-      loginNo,
-      password,
-      name,
-      home,
-      routeOrder,
-      morningTime,
-      school,
-      updatedAt:serverTimestamp()
-    });
+    if(String(oldDocId)!==loginNo){
+      const batch=writeBatch(db);
+      batch.set(doc(db,"teachers",loginNo),updatedData,{merge:true});
+      batch.delete(doc(db,"teachers",String(oldDocId)));
+      await batch.commit();
+    }else{
+      await updateDoc(doc(db,"teachers",String(oldDocId)),updatedData);
+    }
+
     closeTeacherEdit();
     alert("Öğretmenin tüm bilgileri güncellendi.");
   }catch(err){
