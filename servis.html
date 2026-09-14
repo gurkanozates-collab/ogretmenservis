@@ -227,6 +227,186 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   }
 }
 
+
+/* ===== Güzergâh Liste Tasarımı ===== */
+.route-timeline{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+.route-stop{
+  position:relative;
+  display:grid;
+  grid-template-columns:42px 72px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 4px 12px rgba(15,23,42,.035);
+}
+.route-stop:not(:last-child):after{
+  content:"";
+  position:absolute;
+  left:32px;
+  bottom:-11px;
+  width:2px;
+  height:12px;
+  background:#cbd5e1;
+}
+.route-order-badge{
+  width:34px;
+  height:34px;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  background:#0f172a;
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+  box-shadow:0 5px 12px rgba(15,23,42,.16);
+}
+.route-time-pill{
+  justify-self:start;
+  min-width:64px;
+  text-align:center;
+  padding:7px 9px;
+  border-radius:10px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  border:1px solid #dbeafe;
+  font-size:13px;
+  font-weight:900;
+}
+.route-person{
+  min-width:0;
+}
+.route-person-name{
+  font-size:14px;
+  font-weight:900;
+  color:#0f172a;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.route-person-stop{
+  margin-top:3px;
+  display:flex;
+  gap:5px;
+  align-items:center;
+  font-size:12px;
+  color:#64748b;
+  line-height:1.35;
+}
+.route-empty{
+  margin-top:12px;
+  padding:14px;
+  border-radius:13px;
+  background:#f8fafc;
+  border:1px dashed #cbd5e1;
+  color:#64748b;
+  text-align:center;
+  font-size:13px;
+}
+.school-groups{
+  margin-top:14px;
+  display:grid;
+  gap:9px;
+}
+.school-group-card{
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  background:#fff;
+  padding:12px 13px;
+}
+.school-group-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.school-group-name{
+  font-size:13px;
+  font-weight:900;
+  color:#0f172a;
+}
+.school-count-pill{
+  padding:5px 8px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#4338ca;
+  font-size:11px;
+  font-weight:900;
+}
+.school-group-names{
+  margin-top:7px;
+  color:#64748b;
+  font-size:12px;
+  line-height:1.5;
+}
+@media(max-width:560px){
+  .route-stop{
+    grid-template-columns:36px 62px 1fr;
+    gap:8px;
+    padding:10px;
+  }
+  .route-order-badge{width:30px;height:30px;border-radius:9px}
+  .route-stop:not(:last-child):after{left:24px}
+  .route-time-pill{min-width:58px;padding:6px 7px}
+  .route-person-name{font-size:13px}
+}
+
+
+/* ===== Öğretmen Paneli - Yönetici ile Aynı Güzergâh Tasarımı ===== */
+#teacher #teacherLive .published{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+#teacher #teacherLive .published > b{
+  display:block;
+  font-size:16px;
+  color:#0f172a;
+  margin-bottom:10px;
+}
+#teacher #teacherLive .count-menu{
+  margin-top:0;
+}
+#teacher #teacherLive .route-timeline{
+  margin-top:12px;
+}
+#teacher #teacherLive .route-stop{
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 4px 12px rgba(15,23,42,.035);
+}
+#teacher #teacherLive .route-order-badge{
+  background:#0f172a;
+  color:#fff;
+}
+#teacher #teacherLive .route-time-pill{
+  background:#eff6ff;
+  color:#1d4ed8;
+  border:1px solid #dbeafe;
+}
+#teacher #teacherLive .school-groups{
+  margin-top:12px;
+}
+#teacher #teacherLive .school-group-card{
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  background:#fff;
+}
+#teacher #teacherLive .school-count-pill{
+  background:#eef2ff;
+  color:#4338ca;
+}
+
 </style>
 </head>
 <body>
@@ -1072,17 +1252,42 @@ function renderLivePanels(){
 
   // Sadece OKUL ÇIKIŞI BİNECEĞİM butonuna basan öğretmenlerin okulları gösterilir.
   const eveningSchools=[...new Set(eveningTeachers.map(t=>t.school).filter(Boolean))];
-  const eveningSchoolHtml=eveningSchools.map(s=>{
-    const list=eveningTeachers.filter(t=>t.school===s);
-    return `<div style="margin-top:8px"><b>${s}: ${list.length} kişi</b><br>${list.map(t=>t.name).join(", ")}</div>`;
-  }).join("");
+  const eveningSchoolHtml=`
+    <div class="school-groups">
+      ${eveningSchools.map(s=>{
+        const list=eveningTeachers.filter(t=>t.school===s);
+        return `
+          <div class="school-group-card">
+            <div class="school-group-head">
+              <div class="school-group-name">🏫 ${s}</div>
+              <div class="school-count-pill">${list.length} kişi</div>
+            </div>
+            <div class="school-group-names">${list.map(t=>t.name).join(" • ")}</div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
 
   const morningHtml=`
     <div class="count-menu">
       <div class="count-box"><div class="num">${totalTeachers}</div><div class="txt">TOPLAM ÖĞRETMEN</div></div>
       <div class="count-box"><div class="num">${morningTotal}</div><div class="txt">GELECEK</div></div>
     </div>
-    ${morningTotal ? `<div style="margin-top:10px"><b>Güzergâh:</b><br>${morning.map(t=>`${t.dynamicMorningTime||"-"} — ${t.name} — ${t.home||"-"}`).join("<br>")}</div>` : ""}
+    ${morningTotal ? `
+      <div class="route-timeline">
+        ${morning.map((t,i)=>`
+          <div class="route-stop">
+            <div class="route-order-badge">${i+1}</div>
+            <div class="route-time-pill">${t.dynamicMorningTime||"-"}</div>
+            <div class="route-person">
+              <div class="route-person-name">${t.name}</div>
+              <div class="route-person-stop">📍 ${t.home||"-"}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : '<div class="route-empty">Henüz sabah bineceğini bildiren öğretmen yok.</div>'}
   `;
 
   const eveningHtml=`
@@ -1090,7 +1295,7 @@ function renderLivePanels(){
       <div class="count-box"><div class="num">${totalTeachers}</div><div class="txt">TOPLAM ÖĞRETMEN</div></div>
       <div class="count-box"><div class="num">${eveningTotal}</div><div class="txt">GELECEK</div></div>
     </div>
-    ${eveningTotal ? eveningSchoolHtml : '<div style="margin-top:10px">Henüz okul çıkışı için bineceğini bildiren öğretmen yok.</div>'}
+    ${eveningTotal ? eveningSchoolHtml : '<div class="route-empty">Henüz okul çıkışı için bineceğini bildiren öğretmen yok.</div>'}
   `;
 
   const am=document.getElementById("adminMorning");
@@ -1102,9 +1307,9 @@ function renderLivePanels(){
   if(tl){
     let out="";
     if(tripIsActive("morning")){
-      out+='<div class="published"><b>🌅 Sabah Güzergâhı</b><br>'+morningHtml+'</div>';
+      out+='<div class="published"><b>🌅 Sabah Güzergâhı</b>'+morningHtml+'</div>';
     }else if(tripIsActive("evening")){
-      out+='<div class="published"><b>🏫 Okul Çıkışı</b><br>'+eveningHtml+'</div>';
+      out+='<div class="published"><b>🏫 Okul Çıkışı</b>'+eveningHtml+'</div>';
     }
     tl.innerHTML=out||"Aktif sefer bilgisi bulunamadı.";
   }
