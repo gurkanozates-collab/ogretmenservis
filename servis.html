@@ -506,8 +506,27 @@ function currentTeacher(){
   return teachers.find(t=>Number(t.id)===Number(currentTeacherId));
 }
 
+function formatMinutes(totalMinutes){
+  const h=Math.floor(totalMinutes/60)%24;
+  const m=totalMinutes%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
 function activeMorning(){
-  return teachers.filter(t=>t.morning===true).sort((a,b)=>a.routeOrder-b.routeOrder);
+  // Bineceğim diyenleri HER ZAMAN güzergâh sırasına göre dizer.
+  // Saatler 05:40'tan başlar ve 5'er dakika ilerler.
+  // Sonradan biri katılırsa kendi güzergâh sırasına girer ve
+  // kendisinden sonraki herkesin saati otomatik yeniden hesaplanır.
+  const START_MINUTES=5*60+40;
+  const STEP_MINUTES=5;
+
+  return teachers
+    .filter(t=>t.morning===true)
+    .sort((a,b)=>(Number(a.routeOrder)||9999)-(Number(b.routeOrder)||9999))
+    .map((t,index)=>({
+      ...t,
+      dynamicMorningTime:formatMinutes(START_MINUTES+(index*STEP_MINUTES))
+    }));
 }
 
 function activeEvening(){
@@ -709,7 +728,7 @@ function renderMorningRoute(){
   }
   el.innerHTML=
     '<div class="route head"><span>Sıra</span><span>Saat</span><span>Öğretmen</span><span>Alınacağı Yer</span></div>'+
-    list.map((t,i)=>`<div class="route"><b>${i+1}</b><b>${t.morningTime||"-"}</b><span>${t.name}</span><span class="loc">${t.home||"-"}</span></div>`).join("");
+    list.map((t,i)=>`<div class="route"><b>${i+1}</b><b>${t.dynamicMorningTime||"-"}</b><span>${t.name}</span><span class="loc">${t.home||"-"}</span></div>`).join("");
 }
 
 function renderEveningCounts(){
@@ -852,7 +871,7 @@ function renderLivePanels(){
       <div class="count-box"><div class="num">${totalTeachers}</div><div class="txt">TOPLAM ÖĞRETMEN</div></div>
       <div class="count-box"><div class="num">${morningTotal}</div><div class="txt">GELECEK</div></div>
     </div>
-    ${morningTotal ? `<div style="margin-top:10px"><b>Güzergâh:</b><br>${morning.map(t=>`${t.morningTime||"-"} — ${t.name} — ${t.home||"-"}`).join("<br>")}</div>` : ""}
+    ${morningTotal ? `<div style="margin-top:10px"><b>Güzergâh:</b><br>${morning.map(t=>`${t.dynamicMorningTime||"-"} — ${t.name} — ${t.home||"-"}`).join("<br>")}</div>` : ""}
   `;
 
   const eveningHtml=`
@@ -896,8 +915,9 @@ function renderTeacher(){
   eb.textContent=t.evening?"OKUL ÇIKIŞI İPTAL ET":"OKUL ÇIKIŞI BİNECEĞİM";
   eb.className=(t.evening?"red":"orange")+" big";
 
+  const dynamicMorningRecord=activeMorning().find(x=>String(x.docId)===String(t.docId));
   document.getElementById("morningTime").innerHTML=t.morning
-    ? '<div class="published">Servis saatiniz: <b>'+(t.morningTime||"-")+'</b></div>'
+    ? '<div class="published">Servis saatiniz: <b>'+(dynamicMorningRecord?.dynamicMorningTime||"-")+'</b><br><small>Güzergâh sırasına göre otomatik güncellenir.</small></div>'
     : "";
 
   document.getElementById("eveningStatus").innerHTML=t.evening
