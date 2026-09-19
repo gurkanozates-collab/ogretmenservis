@@ -453,6 +453,95 @@ input{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd6e1;border-
   line-height:1.5;
 }
 
+
+/* ===== v40 TELEFON ÖNCELİKLİ TASARIM ===== */
+html{-webkit-text-size-adjust:100%}
+body{overflow-x:hidden}
+button,input,select,textarea{font-size:16px}
+button,input,select{min-height:48px}
+button{touch-action:manipulation}
+
+@media(max-width:640px){
+ body{padding:0!important;background:#f4f7fb}
+ .panel{width:100%;min-height:100dvh}
+
+ /* Giriş */
+ #home{padding:14px!important;align-items:flex-start}
+ #home .card.login{width:100%;max-width:none;margin:20px 0 0;padding:20px 15px;border-radius:20px}
+ #home .card.login h2{font-size:22px}
+ .login-role-tabs{gap:6px;margin:12px 0 16px}
+ .login-role-btn{min-width:0;padding:9px 6px;font-size:13px}
+ #home input,#home button{width:100%}
+
+ /* Yönetici */
+ #admin{padding:0!important}
+ #admin .admin-shell{width:100%;max-width:none;margin:0;padding:0 9px 20px}
+ #admin .admin-hero{margin:0 -9px 9px;border-radius:0 0 21px 21px;padding:14px 11px 17px}
+ #admin .admin-topbar{align-items:flex-start;gap:8px}
+ #admin .admin-titlebox{min-width:0;gap:8px}
+ #admin .admin-logo{width:40px;height:40px;min-width:40px;border-radius:11px;font-size:20px}
+ #admin .admin-titlebox h2{font-size:17px;line-height:1.15}
+ #admin .admin-subtitle{font-size:10.5px;line-height:1.35;margin-top:3px}
+ #admin .admin-logout{width:auto;min-height:39px;padding:7px 9px;font-size:11px;white-space:nowrap}
+ #admin .admin-tabs-card{padding:5px;border-radius:14px;margin-bottom:9px}
+ #admin .admin-tabs{grid-template-columns:1fr!important;gap:5px}
+ #admin .admin-tab{width:100%;min-height:45px;padding:8px 7px;font-size:11.5px;line-height:1.25}
+ #admin .admin-dashboard-card,#admin .admin-form-card,#admin .admin-list-card{padding:11px;border-radius:16px}
+ #admin .section-heading{align-items:flex-start;gap:7px;margin-bottom:9px}
+ #admin .section-heading h2{font-size:16px}
+ #admin .section-heading p{font-size:10.5px;line-height:1.4}
+ #admin .live-chip{font-size:9px;padding:5px 7px}
+ #admin .admin-route-grid{grid-template-columns:1fr!important;gap:9px}
+ #admin .trip-card{padding:10px;border-radius:15px}
+ #admin .trip-head{gap:7px}
+ #admin .trip-title{min-width:0;gap:7px}
+ #admin .trip-icon{width:36px;height:36px;min-width:36px;font-size:17px}
+ #admin .trip-title h3{font-size:13px}
+ #admin .trip-title small{font-size:9.5px}
+ #admin .danger-mini{width:auto;min-height:37px;padding:6px 8px;font-size:10px}
+
+ /* Sayaç + güzergâh */
+ .count-menu{grid-template-columns:1fr 1fr!important;gap:6px!important}
+ .count-box{min-width:0;padding:9px 5px!important}
+ .count-box .num{font-size:21px!important}
+ .count-box .txt{font-size:8.5px!important;line-height:1.2}
+ .route-timeline{gap:7px}
+ .route-stop{grid-template-columns:32px 56px minmax(0,1fr)!important;gap:6px!important;padding:8px 7px!important;border-radius:12px!important}
+ .route-stop:not(:last-child):after{left:23px!important}
+ .route-order-badge{width:29px!important;height:29px!important;border-radius:9px!important;font-size:10.5px!important}
+ .route-time-pill{min-width:52px!important;padding:5px 4px!important;font-size:10.5px!important}
+ .route-person-name{font-size:12.5px!important}
+ .route-person-stop{font-size:10px!important}
+ .school-group-card{padding:9px!important;border-radius:12px!important}
+ .school-group-name{font-size:11.5px!important}
+ .school-count-pill{font-size:9.5px!important}
+ .school-group-names{font-size:10.5px!important}
+
+ /* Formlar */
+ .formgrid{grid-template-columns:1fr!important;gap:8px!important}
+ .formgrid input,.formgrid select{width:100%}
+ #admin .teacher-list-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+ /* Öğretmen */
+ #teacher{padding:9px!important}
+ #teacher .card{width:100%;max-width:none;padding:13px;border-radius:16px}
+ #teacher .tabs,#teacher .teacher-tabs{gap:5px}
+ #teacher .tabs button,#teacher .teacher-tabs button{min-height:45px;padding:8px 6px;font-size:11.5px}
+ #teacher #teacherLive .published{padding:10px;border-radius:14px}
+ #teacher #teacherLive .published>b{font-size:13.5px}
+ #teacher button{width:100%}
+
+ /* Modal */
+ .modal{padding:9px!important}
+ .modal-content,.modal .card{width:100%!important;max-width:none!important;max-height:92dvh;overflow-y:auto;border-radius:17px!important;padding:14px!important}
+}
+@media(max-width:380px){
+ #admin .admin-titlebox h2{font-size:15px}
+ #admin .admin-subtitle{display:none}
+ .route-stop{grid-template-columns:29px 50px minmax(0,1fr)!important;gap:4px!important}
+ .route-time-pill{min-width:47px!important;font-size:9.5px!important}
+}
+
 </style>
 </head>
 <body>
